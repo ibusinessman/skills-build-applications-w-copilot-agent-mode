@@ -1,0 +1,119 @@
+/* General styles */
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f0f8ff;
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  text-align: center;
+}
+
+/* Navigation styles */
+.navbar {
+  background-color: #4682b4 !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+  color: #ffffff !important;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.nav-link {
+  color: #e0f0ff !important;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.nav-link:hover {
+  color: #ffffff !important;
+  text-decoration: underline;
+}
+
+/* Component styles */
+h1, h2 {
+  color: #00008b;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+/* Table styles */
+.table {
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table thead th {
+  background-color: #4682b4;
+  color: white;
+  font-size: 1.1rem;
+  border: none;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #f0f8ff;
+}
+
+.table tbody tr:hover {
+  background-color: #e0ffff;
+}
+
+/* Card styles */
+.card {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.card-header {
+  background-color: #4682b4;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: #4682b4;
+  border-color: #4682b4;
+}
+
+.btn-primary:hover {
+  background-color: #5a9bd4;
+  border-color: #5a9bd4;
+}
+
+/* Badge styles */
+.badge-score {
+  background-color: #4682b4;
+  color: white;
+  padding: 0.4em 0.8em;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+/* Rank styles */
+.rank-1 { color: #FFD700; font-weight: bold; }
+.rank-2 { color: #C0C0C0; font-weight: bold; }
+.rank-3 { color: #CD7F32; font-weight: bold; }
+
+/* Container padding */
+.content-container {
+  padding: 2rem 1rem;
+}
+
+/* Alert styles */
+.alert-info {
+  background-color: #e8f4f8;
+  border-color: #4682b4;
+  color: #00008b;
+}
