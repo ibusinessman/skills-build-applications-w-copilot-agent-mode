@@ -1,16 +1,23 @@
 {
-  "name": "SATOR",
+  "name": "SATOR — AI Agent Evaluation Platform",
   "short_name": "SATOR",
-  "description": "Systematic Architecture via Tenet-Oriented Recursion — a recursive governance and fractal modeling engine for systemic truth",
+  "description": "Evaluate, audit, and govern AI agent work using the five-layer SATOR framework (Strategy · Architecture · Tenet · Output · Rotation). Built for enterprise AI governance.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#6366f1",
+  "lang": "en",
+  "categories": ["business", "productivity", "utilities"],
+  "keywords": ["AI agent evaluation", "AI governance", "LLM evaluation", "AI audit", "AI quality assurance"],
+  "screenshots": [],
   "icons": [
     {
       "src": "/vite.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

@@ -1,0 +1,175 @@
+# SATOR — AI Agent Evaluation & Governance Platform
+
+> SATOR (Systematic Architecture via Tenet-Oriented Recursion) is a multi-tenant SaaS platform that evaluates, audits, and governs the work and decisions of AI agents using a proprietary five-layer recursive governance framework. It is the operating system for AI agent quality assurance.
+
+## What is SATOR?
+
+SATOR is a cloud-based platform designed for organizations deploying AI agents. It provides systematic tools to:
+
+- Evaluate the quality and strategic alignment of AI agent outputs
+- Detect governance breaches and structural weaknesses in AI reasoning
+- Audit AI agent decisions against defined organizational tenets
+- Simulate how AI agent systems perform under adverse stress conditions
+- Monitor real-time system integrity across deployed AI agents
+- Manage multi-agent collaboration for continuous improvement
+
+SATOR is built for AI engineering teams, enterprise governance officers, MLOps engineers, and any organization that deploys AI agents and needs systematic quality assurance and regulatory compliance.
+
+## The SATOR Framework (Five Evaluation Layers)
+
+SATOR evaluates AI agent work across five recursive dimensions. The framework is named after the ancient Latin palindrome square (SATOR AREPO TENET OPERA ROTAS), which reads identically forwards, backwards, up, and down — symbolizing the self-referential, recursive nature of systemic truth.
+
+1. **Strategy** — Does the AI agent's output align with organizational strategic intent, goals, and direction? Scored 0–100.
+
+2. **Architecture** — Is the AI agent's reasoning structure internally consistent, logically sound, and well-formed? Scored 0–100.
+
+3. **Tenet** — Does the AI agent's output comply with defined operational principles, ethical constraints, and governance policies? Scored 0–100.
+
+4. **Output** — Are the measurable results produced by the AI agent correct, complete, useful, and actionable? Scored 0–100.
+
+5. **Rotation** — How does output quality compound recursively over time? Does the AI agent improve, degrade, or stay stable across iterations? Scored 0–100.
+
+Each layer receives an individual score and a composite Overall Score. Detected breaches are classified by severity: low, medium, high, or critical. Contract Compliance is a boolean pass/fail indicator.
+
+The framework can be read in reverse as ROTAS — offering an alternative perspective that inverts the evaluation direction (from Output back to Strategy), useful for retrospective analysis.
+
+## Core Features
+
+### SATOR Audit Engine
+The primary evaluation tool. Users submit an AI agent directive, task description, or output for analysis. The Audit Engine scores the submission across all five SATOR layers, detects governance leaks with specific recommendations, determines Contract Compliance status, and generates reports exportable as PDF or structured JSON.
+
+### Three Specialized Evaluator Agents (Powered by Google Gemini)
+
+- **Seed Bot** — Origination intelligence. Identifies foundational tenets, first-principle truths, and core beliefs that should govern an AI agent's operation. Used for establishing evaluation baselines.
+
+- **Diagnostics Bot** — Analytical intelligence. Surfaces structural weaknesses, logical inconsistencies, and governance gaps in AI agent outputs with surgical precision. Clinically direct and data-oriented.
+
+- **Optimization Bot** — Iterative intelligence. Transforms diagnostic findings into actionable improvements. Specializes in recursive refinement, leverage points, and self-reinforcing quality systems.
+
+### Fractal Stress Simulation
+Tests AI agent resilience through recursive branching failure scenario modeling. Preset scenarios include: market collapse, key-man risk, regulatory shock, competitive disruption, technology failure, and supply chain break. Users can also define custom scenarios with additional organizational context. Each simulation returns a Stability Score (0–100), Fractal Depth, Branching Factor, identified Collapse Points, strategic Insights, and a Primary Recommendation.
+
+### Real-Time System Integrity Monitoring
+WebSocket-based live health scoring that broadcasts system integrity updates every 5 seconds. Tracks health score, timestamp, and delta (change since last check). Displayed as an animated gauge in the Dashboard.
+
+### Fractal Visualizer
+D3.js-powered interactive visualization of recursive decision branching. Configurable depth (3–10), branch angle, branch ratio, and color scheme. Represents the fractal nature of AI decision trees.
+
+### Operations Management
+CRUD management for market operations tied to AI agent performance targets. Each operation has name, market, revenue target, and status (planning, active, paused, complete).
+
+### Growth Drills
+Structured growth initiatives with measurable targets and progress tracking. Drill types include revenue, market, product, talent, and operational.
+
+### Revenue Units
+Team-level performance management. Each revenue unit has a lead, headcount, focus area, and performance score.
+
+### Performance Ledger
+Ranked performance table across all revenue personnel.
+
+### Personnel & Identity Management
+Role-based access control with four clearance levels: Alpha, Beta, Gamma, Delta.
+
+### System Logs
+Real-time operational event stream with filtering by level (info, warn, error, debug) and full text search. Exportable as plain text.
+
+## Multi-Tenant SaaS Architecture
+
+SATOR is a multi-tenant platform. Each organization (tenant) has fully isolated data. Key architectural properties:
+
+- **Authentication**: JWT tokens in httpOnly cookies (7-day sessions)
+- **Database**: SQLite with WAL mode for concurrent performance
+- **Data isolation**: All records scoped to org_id with foreign key enforcement
+- **Team management**: Admin/member roles, invite-based onboarding
+- **Usage tracking**: Monthly AI call counting per organization
+
+## Pricing Plans
+
+### Free
+- 50 AI evaluations per month
+- Up to 3 team members
+- SATOR Audit Engine
+- Operations & Drills management
+- Fractal Visualizer
+- System Logs
+- Price: $0/month
+
+### Pro
+- 1,000 AI evaluations per month
+- Up to 25 team members
+- All Free features
+- All 3 AI Evaluator Agents
+- Fractal Stress Simulation
+- PDF and JSON export
+- Team invite management
+- Priority support
+- Price: $29/month
+
+### Enterprise
+- Unlimited AI evaluations
+- Unlimited team members
+- All Pro features
+- Bring your own Google Gemini API key
+- Usage analytics dashboard
+- Role-based access control
+- SLA and dedicated support
+- Price: $99/month
+
+## Technology Stack
+
+- **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS v4
+- **Backend**: Node.js, Express.js, WebSocket (ws)
+- **Database**: SQLite (better-sqlite3) with WAL mode
+- **AI Engine**: Google Gemini (gemini-2.0-flash model) via @google/genai SDK
+- **Visualization**: D3.js (fractal tree), Recharts (radar charts)
+- **Animation**: Framer Motion / Motion
+- **Authentication**: JWT (jsonwebtoken), bcryptjs
+- **Export**: jsPDF, html2canvas
+
+## Frequently Asked Questions
+
+**What is an AI agent evaluation platform?**
+An AI agent evaluation platform is software that systematically assesses the quality, correctness, and governance compliance of outputs generated by AI agents. Unlike simple LLM benchmarks, SATOR evaluates AI agent work against organizational-specific tenets, strategic intent, and structural soundness across five recursive dimensions.
+
+**What types of AI agents can SATOR evaluate?**
+SATOR can evaluate any AI agent that produces text-based outputs, decisions, recommendations, code, plans, or structured data. This includes LLM-based agents (built on GPT, Claude, Gemini, etc.), autonomous agents, RAG pipelines, multi-agent systems, and AI copilots.
+
+**How is SATOR different from LLM benchmarks?**
+Standard LLM benchmarks measure model capability on fixed datasets. SATOR evaluates AI agent outputs in organizational context — against your specific tenets, strategic goals, and governance frameworks. It is descriptive and contextual rather than comparative.
+
+**What is the SATOR magic square?**
+The SATOR magic square is a 5x5 Latin palindrome grid (SATOR / AREPO / TENET / OPERA / ROTAS) that reads identically in all four directions. It dates to ancient Rome and has been found inscribed in Pompeii, Cirencester, and other sites. SATOR uses it as a symbol of recursive, self-referential systemic truth — the same quality sought in rigorous AI governance.
+
+**Is SATOR compliant with AI governance regulations?**
+SATOR is designed to support compliance with emerging AI governance frameworks including the EU AI Act, NIST AI RMF, and ISO/IEC 42001. It provides audit trails, scored evaluations, breach detection, and contract compliance indicators.
+
+**Can SATOR evaluate AI agents in real time?**
+SATOR's system integrity monitoring runs in real time via WebSocket connections. Audit evaluations and simulations are on-demand and complete in seconds using the Gemini API.
+
+**What is GEO optimization in the context of SATOR?**
+SATOR itself practices what it enables: Generative Engine Optimization (GEO) ensures that this platform's content is structured for accurate retrieval and citation by AI-powered search engines (ChatGPT, Perplexity, Claude, Gemini). SATOR's public content is structured with semantic HTML, JSON-LD schema, llms.txt, and factual, citable descriptions.
+
+## Entity Definitions
+
+**SATOR** (noun): A SaaS platform for AI agent evaluation and governance. Also: an acronym for Systematic Architecture via Tenet-Oriented Recursion.
+
+**SATOR Framework** (noun): A five-layer recursive evaluation methodology (Strategy, Architecture, Tenet, Output, Rotation) for assessing AI agent work quality.
+
+**ROTAS** (noun): The reverse reading of the SATOR framework, used for retrospective analysis (Rotation → Output → Tenet → Architecture → Strategy).
+
+**Tenet** (noun, in SATOR context): A defined organizational principle, policy, or constraint against which AI agent outputs are evaluated.
+
+**Governance Leak** (noun): A detected deviation between an AI agent's output and the expected governance standard, classified by severity (low/medium/high/critical).
+
+**Contract Compliance** (noun): A boolean pass/fail determination of whether an AI agent's output meets the minimum acceptable governance threshold.
+
+**Fractal Depth** (noun): A measure of recursive branching complexity in SATOR's stress simulations, scored 1–10.
+
+**System Integrity Score** (noun): A real-time 0–100 score representing the current health of the monitored system, updated every 5 seconds.
+
+## Source and Attribution
+
+This file follows the llms.txt standard (https://llmstxt.org) to provide AI language models with accurate, citable information about SATOR.
+
+Last updated: 2025-05-07
+Canonical URL: https://sator.app/llms.txt

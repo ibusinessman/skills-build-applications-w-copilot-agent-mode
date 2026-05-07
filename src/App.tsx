@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Sidebar, ViewKey } from '@/components/Sidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AuthView } from '@/views/Auth';
+import { LandingPage } from '@/views/Landing';
 import { DashboardView } from '@/views/Dashboard';
 import { AuditView } from '@/views/Audit';
 import { AgentsView } from '@/views/Agents';
@@ -120,6 +121,7 @@ const VIEW_COMPONENTS: Record<ViewKey, React.ComponentType> = {
 function AppShell() {
   const { user, loading } = useAuth();
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
+  const [showAuth, setShowAuth] = useState(false);
 
   if (loading) {
     return (
@@ -129,7 +131,10 @@ function AppShell() {
     );
   }
 
-  if (!user) return <AuthView />;
+  if (!user) {
+    if (showAuth) return <AuthView onBack={() => setShowAuth(false)} />;
+    return <LandingPage onSignIn={() => setShowAuth(true)} onGetStarted={() => setShowAuth(true)} />;
+  }
 
   const ActiveComponent = VIEW_COMPONENTS[activeView];
 

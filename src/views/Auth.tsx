@@ -1,12 +1,16 @@
 import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
-import { Eye, EyeOff, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 import { SatorSquare } from '@/components/SatorSquare';
 
 type Mode = 'login' | 'register';
 
-export function AuthView() {
+interface AuthViewProps {
+  onBack?: () => void;
+}
+
+export function AuthView({ onBack }: AuthViewProps) {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [loading, setLoading] = useState(false);
@@ -48,6 +52,15 @@ export function AuthView() {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'var(--bg-primary)' }}
     >
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-6 left-6 flex items-center gap-1.5 text-xs transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to home
+        </button>
+      )}
       <div className="w-full max-w-md space-y-8">
         {/* Brand */}
         <div className="text-center space-y-3">
