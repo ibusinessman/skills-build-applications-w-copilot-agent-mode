@@ -15,6 +15,7 @@ import {
   CreditCard,
   LogOut,
   Crown,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -32,7 +33,8 @@ export type ViewKey =
   | 'personnel'
   | 'logs'
   | 'settings'
-  | 'billing';
+  | 'billing'
+  | 'whitepaper';
 
 interface NavItem {
   key: ViewKey;
@@ -52,9 +54,10 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'units',      label: 'Revenue Units',  icon: Users,           group: 'Revenue' },
   { key: 'ledger',     label: 'Ledger',         icon: BookOpen,        group: 'Revenue' },
   { key: 'personnel',  label: 'Personnel',      icon: UserCog,         group: 'Revenue' },
-  { key: 'logs',       label: 'System Logs',    icon: ScrollText,      group: 'System' },
-  { key: 'settings',   label: 'Settings',       icon: Settings,        group: 'System' },
-  { key: 'billing',    label: 'Plans & Billing', icon: CreditCard,     group: 'System' },
+  { key: 'logs',        label: 'System Logs',    icon: ScrollText,  group: 'System' },
+  { key: 'whitepaper',  label: 'White Paper',    icon: FileText,    group: 'System' },
+  { key: 'settings',    label: 'Settings',       icon: Settings,    group: 'System' },
+  { key: 'billing',     label: 'Plans & Billing', icon: CreditCard, group: 'System' },
 ];
 
 const GROUPS = ['Core', 'Revenue', 'System'];

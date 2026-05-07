@@ -17,6 +17,7 @@ import { LedgerView } from '@/views/Ledger';
 import { PersonnelView } from '@/views/Personnel';
 import { SettingsView } from '@/views/Settings';
 import { BillingView } from '@/views/Billing';
+import { WhitePaperView } from '@/views/WhitePaper';
 import { ScrollText, Search, Download, Filter, Loader2 } from 'lucide-react';
 
 // ── Inline Logs view ──────────────────────────────────────────────────────────
@@ -114,8 +115,9 @@ const VIEW_COMPONENTS: Record<ViewKey, React.ComponentType> = {
   ledger:     LedgerView,
   personnel:  PersonnelView,
   logs:       LogsView,
-  settings:   SettingsView,
-  billing:    BillingView,
+  settings:    SettingsView,
+  billing:     BillingView,
+  whitepaper:  WhitePaperView,
 };
 
 function AppShell() {
