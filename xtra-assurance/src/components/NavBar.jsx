@@ -8,9 +8,11 @@ export default function NavBar() {
   const { t } = useLang();
 
   const items = [
-    { path: '/',                  icon: '🏠', labelKey: 'home' },
-    { path: '/xtra-panne',        icon: '📊', labelKey: 'dashboard' },
-    { path: '/xtra-reklamasyon',  icon: '📋', labelKey: 'claim' },
+    { path: '/',                 icon: '🏠', labelKey: 'home' },
+    { path: '/xtra-panne',       icon: '📊', labelKey: 'dashboard' },
+    { path: '/xtra-reklamasyon', icon: '📋', labelKey: 'claim' },
+    { path: '/wallet',           icon: '💼', labelKey: 'wallet' },
+    { path: '/profile',          icon: '👤', labelKey: 'profile' },
   ];
 
   return (
