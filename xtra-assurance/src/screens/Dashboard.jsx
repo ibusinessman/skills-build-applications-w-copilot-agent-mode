@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../App.jsx';
 import { api } from '../api.js';
+import PageSEO from '../components/PageSEO.jsx';
 
 function Spinner() {
   return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gold)', fontSize: 32 }}>⚙️</div>;
@@ -49,8 +50,27 @@ export default function Dashboard() {
   const { balance_gourdes, rc_active, risk_score, stats, active_policy, high_risk_zones, recent_claims, unread_notifications } = data;
   const balancePct = Math.min(Math.round((balance_gourdes / 2_000_000) * 100), 100);
 
+  const dashDesc = lang === 'ht'
+    ? `Tableau de bord Xtra Assurance — Balans ${balance_gourdes?.toLocaleString() ?? ''}g, RC ${rc_active ? 'Aktif' : 'Inaktif'}, zon risk GPS ann Ayiti.`
+    : `Tableau de bord Xtra Assurance — Solde ${balance_gourdes?.toLocaleString() ?? ''}g, RC ${rc_active ? 'Actif' : 'Inactif'}, alertes zones à risque en Haïti.`;
+
   return (
     <div className="screen">
+      <PageSEO
+        path="/xtra-panne"
+        title={lang === 'ht' ? 'Tablo Bò — Xtra Panne' : 'Tableau de Bord — Xtra Panne'}
+        description={dashDesc}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Xtra Assurance Dashboard',
+          description: dashDesc,
+          breadcrumb: { '@type': 'BreadcrumbList', itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Akèy', item: 'https://xtra-asirans.ht/' },
+            { '@type': 'ListItem', position: 2, name: 'Tablo Bò', item: 'https://xtra-asirans.ht/xtra-panne' },
+          ]},
+        }}
+      />
       <div className="screen-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="screen-title">{t('dashboard_title')}</h1>
         {unread_notifications > 0 && (

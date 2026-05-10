@@ -5,6 +5,7 @@ import { useToast } from '../toast.jsx';
 import ScreenHeader from '../components/ScreenHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton.jsx';
+import PageSEO from '../components/PageSEO.jsx';
 
 const STATUS_BADGE = {
   pending:    { color: 'var(--warning)', bg: 'rgba(255,149,0,0.14)' },
@@ -89,8 +90,30 @@ export default function Referrals() {
   const earned     = referrals.filter(r => r.status === 'bonus_paid').reduce((s, r) => s + r.bonus_gourdes, 0);
   const pendingCnt = referrals.filter(r => r.status !== 'bonus_paid').length;
 
+  const refDesc = lang === 'ht'
+    ? 'Envite zanmi ou sou Xtra Assurance epi touche 50 goud bonus pou chak chauffè ou refere ann Ayiti. Pataje kòd parenaj ou ak WhatsApp oswa SMS.'
+    : 'Invitez vos amis sur Xtra Assurance et gagnez 50 gourdes de bonus pour chaque chauffeur que vous parrainez en Haïti. Partagez votre code via WhatsApp ou SMS.';
+
   return (
     <div className="screen fade-in">
+      <PageSEO
+        path="/referrals"
+        title={lang === 'ht' ? 'Parenaj — Touche 50g Bonus' : 'Parrainage — Gagnez 50g Bonus'}
+        description={refDesc}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Xtra Assurance Referral Program',
+          description: refDesc,
+          url: 'https://xtra-asirans.ht/referrals',
+          mainEntity: {
+            '@type': 'Service',
+            name: 'Xtra Assurance Referral Bonus',
+            description: 'Touche 50 goud pou chak zanmi ou refere ki enskri sou Xtra Assurance.',
+            offers: { '@type': 'Offer', price: '50', priceCurrency: 'HTG', name: 'Referral Bonus' },
+          },
+        }}
+      />
       <ScreenHeader title={t('referrals_title')} />
 
       {/* Hero */}

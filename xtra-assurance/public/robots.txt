@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /health/
+
+# Sitemap
+Sitemap: https://xtra-asirans.ht/sitemap.xml
+
+# LLM / AI Engine access
+# See https://xtra-asirans.ht/llms.txt for structured AI-readable content

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useLang } from '../App.jsx';
 import { api } from '../api.js';
+import PageSEO from '../components/PageSEO.jsx';
 
 const AUTO_APPROVE_THRESHOLD = 5000;
 
@@ -71,8 +72,28 @@ export default function Claim() {
   const canNext0 = scanState === 'done';
   const canNext1 = parsedAmount > 0 && moncash.length >= 8;
 
+  const claimDesc = lang === 'ht'
+    ? 'Soumèt yon reklamasyon asirans mototaxi ann Ayiti ak Xtra Assurance. Reklamasyon mwens pase 5000g apwouve otomatikman epi peye ak MonCash nan 60 segond.'
+    : 'Soumettre une réclamation assurance mototaxi en Haïti avec Xtra Assurance. Réclamations de moins de 5000g approuvées automatiquement et payées via MonCash en 60 secondes.';
+
   return (
     <div className="screen">
+      <PageSEO
+        path="/xtra-reklamasyon"
+        title={lang === 'ht' ? 'Reklamasyon — Xtra Assurance' : 'Réclamation — Xtra Assurance'}
+        description={claimDesc}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'HowTo',
+          name: lang === 'ht' ? 'Kijan pou soumèt yon reklamasyon moto ann Ayiti' : 'Comment soumettre une réclamation moto en Haïti',
+          description: claimDesc,
+          step: [
+            { '@type': 'HowToStep', position: 1, name: 'Skane vignèt ou', text: 'Pran foto vignèt moto ou pou verifikasyon.' },
+            { '@type': 'HowToStep', position: 2, name: 'Antre montan ak MonCash', text: 'Esplifye montan domaj la epi antre nimewo MonCash ou.' },
+            { '@type': 'HowToStep', position: 3, name: 'Resevwa peman', text: 'Si reklamasyon an mwens pase 5000g, ou resevwa peman otomatikman nan 60 segond.' },
+          ],
+        }}
+      />
       <div className="screen-header">
         <h1 className="screen-title">{t('claim_screen_title')}</h1>
       </div>

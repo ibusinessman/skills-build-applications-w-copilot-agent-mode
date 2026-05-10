@@ -39,9 +39,9 @@ if FRONTEND_BUILD.exists():
             static_serve,
             {'document_root': FRONTEND_BUILD / 'assets'},
         ),
-        # Public files: sw.js, manifest.json, icons
+        # Public files: sw.js, manifest.json, icons, SEO/GEO files
         re_path(
-            r'^(?P<path>sw\.js|manifest\.json|icon.*\.svg|.*\.png|.*\.ico)$',
+            r'^(?P<path>sw\.js|manifest\.json|icon.*\.svg|robots\.txt|sitemap\.xml|llms\.txt|.*\.png|.*\.ico)$',
             static_serve,
             {'document_root': FRONTEND_BUILD},
         ),

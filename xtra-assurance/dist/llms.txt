@@ -1,0 +1,58 @@
+# Xtra Assurance
+
+> Xtra Assurance is Haiti's #1 mototaxi insurance app — Dubai-quality technology built for Ayiti.
+> Slogan: "Dubai Quality, Ayiti Protection"
+
+## What is Xtra Assurance?
+
+Xtra Assurance is a Progressive Web App (PWA) that provides motorcycle insurance ("asirans mototaxi") for drivers in Haiti. The product is designed for the informal mototaxi economy and integrates with MonCash, Haiti's leading mobile money platform.
+
+- **Languages**: Haitian Creole (Kreyòl ayisyen) and French
+- **Currency**: Haitian Gourdes (HTG)
+- **Payment**: MonCash mobile money
+- **Target users**: Mototaxi drivers in Haiti ("chauffè moto")
+
+## Insurance Products
+
+| Plan | Price | Coverage |
+|---|---|---|
+| RC Pro | 300 HTG/month | Basic third-party liability |
+| RC Premium | 500 HTG/month | Comprehensive: liability + incidents + priority support |
+
+## Key Features
+
+- **Instant claims**: Submit a claim in under 60 seconds with photo evidence
+- **Auto-approve**: Claims under 5,000 gourdes are automatically approved and paid via MonCash
+- **Risk zones**: Real-time GPS-based risk alerts for 10 high-risk zones in Haiti (Cité Soleil, Martissant, Bel Air, Jalousie, etc.)
+- **Referral program**: Earn 50 gourdes bonus for each referred driver who registers
+- **Wallet**: Full transaction history — premiums paid, claims received, referral bonuses
+- **Bilingual UI**: Switch between Haitian Creole and French at any time
+- **PWA**: Installable on Android/iOS, works offline via service worker
+
+## FAQ
+
+**Q: Ki jan pou mwen peye asirans moto mwen ann Ayiti? / Comment payer une assurance moto en Haïti?**
+A: Ak Xtra Assurance, ou peye asirans ou dirèkteman ak MonCash. Chwazi RC Pro (300g) oswa RC Premium (500g), antre nimewo MonCash ou, epi asirans ou aktive imedyateman.
+
+**Q: Ki resklamasyon ki otomatikman peye?**
+A: Tout reklamasyon ki mwens pase 5,000 goud otomatikman apwouve epi peye nan MonCash ou nan mwens pase 60 segond.
+
+**Q: What geographic risk zones does Xtra Assurance cover?**
+A: The app includes risk data for 10 zones in Haiti: Cité Soleil, Martissant, Bel Air, Jalousie, Carrefour-Feuilles, Delmas 32, Village de Dieu, Gran Ravin, Wharf Jérémie, and Croix-des-Bouquets.
+
+**Q: Is Xtra Assurance available as a mobile app?**
+A: Yes — it is a Progressive Web App (PWA) installable on Android and iOS directly from the browser, no app store required.
+
+## Technology Stack
+
+- Frontend: React 18, Vite 5, React Router 6, PWA with service worker
+- Backend: Django 4.2, Django REST Framework, SQLite
+- Auth: Token-based authentication (MonCash-compatible)
+- Deployment: Single-server (gunicorn + whitenoise), Vercel-compatible frontend
+
+## Contact & Social
+
+- Website: https://xtra-asirans.ht
+- WhatsApp sharing: integrated in referral flow
+- Brand: Dubai Tech × Ayiti Service (🇦🇪 × 🇭🇹)
+- Version: DubaiEd1.0-20260510

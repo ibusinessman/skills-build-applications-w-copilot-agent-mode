@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import Logo from '../components/Logo.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import { SkeletonCard } from '../components/Skeleton.jsx';
+import PageSEO from '../components/PageSEO.jsx';
 
 export default function Home() {
   const { lang, t } = useLang();
@@ -29,8 +30,27 @@ export default function Home() {
     ? null
     : null;
 
+  const seoDesc = lang === 'ht'
+    ? 'Tableau de bord Xtra Assurance — Balans ou, zon risk GPS, ak reklamasyon rapid pou mototaxi ann Ayiti. Peye ak MonCash.'
+    : 'Tableau de bord Xtra Assurance — Votre solde, alertes zones à risque GPS, et réclamations rapides pour mototaxi en Haïti. Paiement MonCash.';
+
   return (
     <div>
+      <PageSEO
+        path="/"
+        title={lang === 'ht' ? 'Akèy — Asirans Mototaxi Ayiti' : 'Accueil — Assurance Mototaxi Haïti'}
+        description={seoDesc}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Xtra Assurance — Akèy',
+          description: seoDesc,
+          url: 'https://xtra-asirans.ht/',
+          breadcrumb: { '@type': 'BreadcrumbList', itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Akèy', item: 'https://xtra-asirans.ht/' }
+          ]},
+        }}
+      />
       {/* Sticky top bar */}
       <div className="top-bar">
         <Logo variant="full" size={26} />

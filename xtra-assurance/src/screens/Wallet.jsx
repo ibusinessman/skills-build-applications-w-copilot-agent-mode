@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton.jsx';
+import PageSEO from '../components/PageSEO.jsx';
 
 const TX_ICONS = {
   credit:         '💰',
@@ -52,8 +53,17 @@ export default function Wallet() {
   const totalIn  = (data?.transactions || []).filter(x => x.amount_gourdes > 0).reduce((s, x) => s + x.amount_gourdes, 0);
   const totalOut = (data?.transactions || []).filter(x => x.amount_gourdes < 0).reduce((s, x) => s + x.amount_gourdes, 0);
 
+  const walletDesc = lang === 'ht'
+    ? 'Pòtfèy Xtra Assurance — Wè balans ou, istwa tranzaksyon, peman asirans, ak bonus parenaj ann Haïti. MonCash entegre.'
+    : 'Portefeuille Xtra Assurance — Consultez votre solde, historique des transactions, paiements d\'assurance et bonus de parrainage en Haïti. MonCash intégré.';
+
   return (
     <div className="screen fade-in">
+      <PageSEO
+        path="/wallet"
+        title={lang === 'ht' ? 'Pòtfèy — Xtra Assurance' : 'Portefeuille — Xtra Assurance'}
+        description={walletDesc}
+      />
       <ScreenHeader title={t('wallet_title')} />
 
       {/* Hero balance card */}

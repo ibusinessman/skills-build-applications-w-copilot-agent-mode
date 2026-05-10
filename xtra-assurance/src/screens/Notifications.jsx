@@ -5,6 +5,7 @@ import { useToast } from '../toast.jsx';
 import ScreenHeader from '../components/ScreenHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { SkeletonRow } from '../components/Skeleton.jsx';
+import PageSEO from '../components/PageSEO.jsx';
 
 const NOTIF_ICONS = {
   risk_alert: '🚨',
@@ -58,6 +59,13 @@ export default function Notifications() {
 
   return (
     <div className="screen fade-in">
+      <PageSEO
+        path="/notifications"
+        title={lang === 'ht' ? 'Notifikasyon — Xtra Assurance' : 'Notifications — Xtra Assurance'}
+        description={lang === 'ht'
+          ? 'Notifikasyon Xtra Assurance — alèt zon risk, mizajou reklamasyon, ak nouvèl asirans mototaxi ann Ayiti.'
+          : 'Notifications Xtra Assurance — alertes zones à risque, mises à jour réclamations, et actualités assurance mototaxi en Haïti.'}
+      />
       <ScreenHeader
         title={t('notifications_title')}
         action={unreadCount > 0 ? (

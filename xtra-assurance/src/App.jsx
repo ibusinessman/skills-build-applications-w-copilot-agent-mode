@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Home from './screens/Home.jsx';
 import Dashboard from './screens/Dashboard.jsx';
 import Claim from './screens/Claim.jsx';
@@ -53,42 +54,48 @@ export default function App() {
 
   if (booting) {
     return (
-      <LangContext.Provider value={{ lang, setLang, t }}>
-        <SplashScreen />
-      </LangContext.Provider>
+      <HelmetProvider>
+        <LangContext.Provider value={{ lang, setLang, t }}>
+          <SplashScreen />
+        </LangContext.Provider>
+      </HelmetProvider>
     );
   }
 
   if (!authed) {
     return (
-      <LangContext.Provider value={{ lang, setLang, t }}>
-        <ToastProvider>
-          <div className="app-container login-container">
-            <Login onLogin={() => setAuthed(true)} />
-          </div>
-        </ToastProvider>
-      </LangContext.Provider>
+      <HelmetProvider>
+        <LangContext.Provider value={{ lang, setLang, t }}>
+          <ToastProvider>
+            <div className="app-container login-container">
+              <Login onLogin={() => setAuthed(true)} />
+            </div>
+          </ToastProvider>
+        </LangContext.Provider>
+      </HelmetProvider>
     );
   }
 
   return (
-    <LangContext.Provider value={{ lang, setLang, t }}>
-      <ToastProvider>
-        <BrowserRouter>
-          <div className="app-container">
-            <Routes>
-              <Route path="/"                  element={<Home />} />
-              <Route path="/xtra-panne"        element={<Dashboard />} />
-              <Route path="/xtra-reklamasyon"  element={<Claim />} />
-              <Route path="/wallet"            element={<Wallet />} />
-              <Route path="/notifications"     element={<Notifications />} />
-              <Route path="/referrals"         element={<Referrals />} />
-              <Route path="/profile"           element={<Profile onLogout={() => setAuthed(false)} />} />
-            </Routes>
-            <NavBar />
-          </div>
-        </BrowserRouter>
-      </ToastProvider>
-    </LangContext.Provider>
+    <HelmetProvider>
+      <LangContext.Provider value={{ lang, setLang, t }}>
+        <ToastProvider>
+          <BrowserRouter>
+            <div className="app-container">
+              <Routes>
+                <Route path="/"                  element={<Home />} />
+                <Route path="/xtra-panne"        element={<Dashboard />} />
+                <Route path="/xtra-reklamasyon"  element={<Claim />} />
+                <Route path="/wallet"            element={<Wallet />} />
+                <Route path="/notifications"     element={<Notifications />} />
+                <Route path="/referrals"         element={<Referrals />} />
+                <Route path="/profile"           element={<Profile onLogout={() => setAuthed(false)} />} />
+              </Routes>
+              <NavBar />
+            </div>
+          </BrowserRouter>
+        </ToastProvider>
+      </LangContext.Provider>
+    </HelmetProvider>
   );
 }

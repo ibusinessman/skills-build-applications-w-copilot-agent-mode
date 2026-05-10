@@ -5,6 +5,7 @@ import { useToast } from '../toast.jsx';
 import ScreenHeader from '../components/ScreenHeader.jsx';
 import { SkeletonCard } from '../components/Skeleton.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
+import PageSEO from '../components/PageSEO.jsx';
 
 export default function Profile({ onLogout }) {
   const { t } = useLang();
@@ -47,6 +48,13 @@ export default function Profile({ onLogout }) {
 
   return (
     <div className="screen fade-in">
+      <PageSEO
+        path="/profile"
+        title={lang === 'ht' ? 'Pwofil — Xtra Assurance' : 'Profil — Xtra Assurance'}
+        description={lang === 'ht'
+          ? 'Pwofil chauffè Xtra Assurance — vignèt, kòd parenaj, istwa reklamasyon, ak paramèt kont ou ann Ayiti.'
+          : 'Profil chauffeur Xtra Assurance — vignette, code de parrainage, historique réclamations et paramètres du compte en Haïti.'}
+      />
       <ScreenHeader title={t('profile_title')} />
 
       {/* Identity card */}
