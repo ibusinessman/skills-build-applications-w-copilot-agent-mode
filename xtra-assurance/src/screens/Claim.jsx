@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { useLang } from '../App.jsx';
+import { api } from '../api.js';
 
-const AMOUNT = 3500;
 const AUTO_APPROVE_THRESHOLD = 5000;
 
 function StepIndicator({ current, labels }) {
   return (
-    <div className="step-indicator" role="list" aria-label="Etap reklamasyon">
+    <div className="step-indicator" role="list">
       {labels.map((label, i) => {
         const done   = i < current;
         const active = i === current;
@@ -16,9 +16,7 @@ function StepIndicator({ current, labels }) {
               <div className={`step-dot ${active ? 'active' : ''} ${done ? 'done' : ''}`}>
                 {done ? '✓' : i + 1}
               </div>
-              <span className={`step-label ${active ? 'active' : ''} ${done ? 'done' : ''}`}>
-                {label}
-              </span>
+              <span className={`step-label ${active ? 'active' : ''} ${done ? 'done' : ''}`}>{label}</span>
             </div>
             {i < labels.length - 1 && (
               <div className={`step-connector ${done ? 'done' : ''}`} aria-hidden="true" />
@@ -32,17 +30,19 @@ function StepIndicator({ current, labels }) {
 
 export default function Claim() {
   const { t } = useLang();
-  const [step, setStep] = useState(0);
+  const [step, setStep]           = useState(0);
   const [scanState, setScanState] = useState('idle'); // idle | scanning | done
-  const [moncash, setMoncash] = useState('');
+  const [amount, setAmount]       = useState('3500');
+  const [description, setDesc]    = useState('');
+  const [moncash, setMoncash]     = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult]       = useState(null);
+  const [apiError, setApiError]   = useState(null);
 
-  const autoApprove = AMOUNT < AUTO_APPROVE_THRESHOLD;
+  const parsedAmount = parseInt(amount, 10) || 0;
+  const autoApprove  = parsedAmount > 0 && parsedAmount < AUTO_APPROVE_THRESHOLD;
 
-  const stepLabels = [
-    t('claim_step1').split(' ').slice(0, 2).join(' '),
-    t('claim_step2').split(' ').slice(0, 2).join(' '),
-    t('claim_step3').split(' ').slice(0, 2).join(' '),
-  ];
+  const stepLabels = ['Foto', 'Montan', 'Payout'];
 
   const handlePhotoTap = useCallback(() => {
     if (scanState !== 'idle') return;
@@ -50,16 +50,26 @@ export default function Claim() {
     setTimeout(() => setScanState('done'), 1800);
   }, [scanState]);
 
-  const canAdvanceStep0 = scanState === 'done';
-  const canAdvanceStep1 = moncash.length >= 8;
-
-  function handleNext() {
-    setStep(s => Math.min(s + 1, 2));
+  async function handleSubmit() {
+    setSubmitting(true);
+    setApiError(null);
+    try {
+      const claim = await api.submitClaim({
+        amount_gourdes: parsedAmount,
+        description,
+        moncash_phone: moncash,
+      });
+      setResult(claim);
+      setStep(2);
+    } catch (e) {
+      setApiError(e.message || 'Erreur réseau');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleBack() {
-    setStep(s => Math.max(s - 1, 0));
-  }
+  const canNext0 = scanState === 'done';
+  const canNext1 = parsedAmount > 0 && moncash.length >= 8;
 
   return (
     <div className="screen">
@@ -69,7 +79,7 @@ export default function Claim() {
 
       <StepIndicator current={step} labels={stepLabels} />
 
-      {/* ── Step 0: Photo capture ─────────────────────────── */}
+      {/* ── Step 0: OCR scan ────────────────────────────── */}
       {step === 0 && (
         <div className="step-card">
           <h2 className="step-title">{t('claim_step1')}</h2>
@@ -79,7 +89,6 @@ export default function Claim() {
             className="photo-zone"
             role="button"
             tabIndex={0}
-            aria-label={t('scan_placeholder')}
             onClick={handlePhotoTap}
             onKeyDown={e => e.key === 'Enter' && handlePhotoTap()}
           >
@@ -93,9 +102,7 @@ export default function Claim() {
               <div className="photo-scanning">
                 <span className="scan-anim">⚙️</span>
                 <p className="dim-text" style={{ fontSize: 13 }}>{t('loading_scan')}</p>
-                <div className="scan-bar">
-                  <div className="scan-progress" />
-                </div>
+                <div className="scan-bar"><div className="scan-progress" /></div>
               </div>
             )}
             {scanState === 'done' && (
@@ -108,23 +115,49 @@ export default function Claim() {
         </div>
       )}
 
-      {/* ── Step 1: Amount & MonCash ──────────────────────── */}
+      {/* ── Step 1: Amount + MonCash ─────────────────────── */}
       {step === 1 && (
         <div className="step-card">
           <h2 className="step-title">{t('claim_step2')}</h2>
           <p className="step-tech">{t('claim_step1_tech')}</p>
 
           <div className="amount-zone">
-            <div className="amount-big">{t('amount_detected')}</div>
+            <div className="amount-big gold-text" style={{ fontSize: 28, marginBottom: 8 }}>
+              {t('amount_detected')}
+            </div>
             <div className={`approval-pill ${autoApprove ? 'auto' : 'review'}`}>
               {autoApprove ? t('approve_auto') : t('approve_review')}
             </div>
           </div>
 
-          <div className="moncash-input-group">
-            <label className="moncash-label" htmlFor="moncash-num">
-              {t('moncash_label')}
-            </label>
+          {/* Editable amount */}
+          <div className="moncash-input-group mt-12">
+            <label className="moncash-label" htmlFor="amount-input">Montant (g)</label>
+            <input
+              id="amount-input"
+              type="number"
+              className="moncash-input"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              min="1"
+              inputMode="numeric"
+            />
+          </div>
+
+          <div className="moncash-input-group mt-12">
+            <label className="moncash-label" htmlFor="desc-input">Description</label>
+            <input
+              id="desc-input"
+              type="text"
+              className="moncash-input"
+              placeholder="Ex: Clinique Sainte-Croix, frais médicaux…"
+              value={description}
+              onChange={e => setDesc(e.target.value)}
+            />
+          </div>
+
+          <div className="moncash-input-group mt-12">
+            <label className="moncash-label" htmlFor="moncash-num">{t('moncash_label')}</label>
             <input
               id="moncash-num"
               type="tel"
@@ -136,32 +169,52 @@ export default function Claim() {
               inputMode="numeric"
             />
           </div>
+
+          {apiError && (
+            <div className="alert-card" style={{ marginTop: 12 }}>
+              <div className="alert-text">⚠️ {apiError}</div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Step 2: Payout confirmation ───────────────────── */}
-      {step === 2 && (
+      {/* ── Step 2: Confirmation ─────────────────────────── */}
+      {step === 2 && result && (
         <div className="step-card">
           <h2 className="step-title">{t('claim_step3')}</h2>
           <p className="step-tech">{t('payout_time')}</p>
 
           <div className="payout-zone">
-            <span className="payout-emoji" role="img" aria-label="money">💰</span>
-            <p className="payout-confirmed">{t('payout_confirmed')}</p>
-            <p className="payout-time">{t('payout_5min')}</p>
+            <span className="payout-emoji" role="img" aria-label="money">
+              {result.status === 'paid' ? '💰' : '🔍'}
+            </span>
+            <p className="payout-confirmed">
+              {result.status === 'paid' ? t('payout_confirmed') : '🔍 En Révision Xtra'}
+            </p>
+            <p className="payout-time">
+              {result.status === 'paid' ? t('payout_5min') : 'Réponse dans 1h par Xtra Dubai'}
+            </p>
 
             <div className="payout-breakdown">
               <div className="payout-row">
-                <span>{t('amount_detected')}</span>
-                <span>3 500 g</span>
+                <span>Montant</span>
+                <span>{result.amount_gourdes?.toLocaleString()} g</span>
               </div>
               <div className="payout-row">
                 <span>MonCash</span>
-                <span>{moncash ? `+509 ${moncash.slice(0,4)}-${moncash.slice(4)}` : '—'}</span>
+                <span>{result.moncash_phone || '—'}</span>
               </div>
+              {result.moncash_ref && (
+                <div className="payout-row">
+                  <span>Référence</span>
+                  <span style={{ fontSize: 11 }}>{result.moncash_ref}</span>
+                </div>
+              )}
               <div className="payout-row">
-                <span>Status</span>
-                <span className="success-text">⚡ En Cours</span>
+                <span>Statut</span>
+                <span className={result.status === 'paid' ? 'success-text' : 'gold-text'}>
+                  {result.status_display}
+                </span>
               </div>
             </div>
           </div>
@@ -170,23 +223,31 @@ export default function Claim() {
 
       {/* Navigation */}
       <div className="step-nav">
-        {step > 0 && (
-          <button className="btn-outline" onClick={handleBack}>
+        {step > 0 && step < 2 && (
+          <button className="btn-outline" onClick={() => setStep(s => s - 1)}>
             ← {t('back')}
           </button>
         )}
 
-        {step < 2 ? (
-          <button
-            className="btn-gold"
-            onClick={handleNext}
-            disabled={step === 0 ? !canAdvanceStep0 : !canAdvanceStep1}
-          >
+        {step === 0 && (
+          <button className="btn-gold" onClick={() => setStep(1)} disabled={!canNext0}>
             {t('next')} →
           </button>
-        ) : (
-          <button className="btn-gold btn-success" onClick={() => {}}>
-            ✅ {t('submit_claim')}
+        )}
+
+        {step === 1 && (
+          <button
+            className={`btn-gold ${result?.status === 'paid' ? 'btn-success' : ''}`}
+            onClick={handleSubmit}
+            disabled={!canNext1 || submitting}
+          >
+            {submitting ? '⚙️ Dubai AI…' : `✅ ${t('submit_claim')}`}
+          </button>
+        )}
+
+        {step === 2 && (
+          <button className="btn-gold" onClick={() => { setStep(0); setScanState('idle'); setResult(null); setApiError(null); }}>
+            + Nouveau Sinistre
           </button>
         )}
       </div>
