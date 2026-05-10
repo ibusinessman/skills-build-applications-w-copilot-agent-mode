@@ -23,7 +23,9 @@ else:
 "
 
 PORT=${PORT:-8000}
-echo "✅ API ready on port $PORT"
+echo "✅ Full-stack app ready on port $PORT"
+echo "   Frontend: http://0.0.0.0:$PORT/"
+echo "   API:      http://0.0.0.0:$PORT/api/"
 exec gunicorn xtra_backend.wsgi:application \
     --bind "0.0.0.0:$PORT" \
     --workers 2 \

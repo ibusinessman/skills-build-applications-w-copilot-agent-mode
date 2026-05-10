@@ -50,10 +50,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "xtra_backend.urls"
 
+FRONTEND_DIST = BASE_DIR.parent / "dist"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates", FRONTEND_DIST],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
