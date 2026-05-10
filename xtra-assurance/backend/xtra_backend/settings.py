@@ -1,10 +1,14 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "xtra-assurance-dubai-quality-ayiti-protection-secret-key-2026"
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "xtra-assurance-dubai-quality-ayiti-protection-secret-key-2026"
+)
 
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "true").lower() == "true"
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -12,6 +16,11 @@ ALLOWED_HOSTS = [
     "0.0.0.0",
     ".app.github.dev",
     ".githubpreview.dev",
+    ".onrender.com",
+    ".railway.app",
+    ".up.railway.app",
+    ".vercel.app",
+    "*",
 ]
 
 INSTALLED_APPS = [
@@ -29,6 +38,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -43,7 +53,7 @@ ROOT_URLCONF = "xtra_backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -87,7 +97,10 @@ TIME_ZONE = "America/Port-au-Prince"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
