@@ -81,7 +81,7 @@ export default function App() {
     <HelmetProvider>
       <LangContext.Provider value={{ lang, setLang, t, unreadCount, setUnread }}>
         <ToastProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <div className="app-container">
               <Routes>
                 <Route path="/"                  element={<Home />} />
