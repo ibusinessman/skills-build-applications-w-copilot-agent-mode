@@ -9,26 +9,27 @@ import { SkeletonCard } from '../components/Skeleton.jsx';
 import PageSEO from '../components/PageSEO.jsx';
 
 export default function Home() {
-  const { lang, t } = useLang();
+  const { lang, t, setUnread } = useLang();
   const navigate = useNavigate();
-  const [data, setData]       = useState(null);
+  const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setData(await api.dashboard());
+      const d = await api.dashboard();
+      setData(d);
+      setUnread(d.unread_notifications ?? 0);
     } catch (e) {
-      console.error(e);
+      setError(e.message || 'Erreur réseau');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setUnread]);
 
   useEffect(() => { load(); }, [load]);
-
-  const firstName = data?.recent_claims?.[0]?.driver
-    ? null
-    : null;
 
   const seoDesc = lang === 'ht'
     ? 'Tableau de bord Xtra Assurance — Balans ou, zon risk GPS, ak reklamasyon rapid pou mototaxi ann Ayiti. Peye ak MonCash.'
@@ -58,6 +59,17 @@ export default function Home() {
       </div>
 
       <div className="screen">
+        {/* Error state */}
+        {!loading && error && (
+          <div className="alert-card fade-in" role="alert" style={{ marginBottom: 12 }}>
+            <div className="alert-title">⚠️ {t('error_network')}</div>
+            <div className="alert-text">{error}</div>
+            <button className="btn-outline" onClick={load} style={{ marginTop: 10, width: 'auto', padding: '8px 20px', fontSize: 13 }}>
+              {t('retry')}
+            </button>
+          </div>
+        )}
+
         {/* Personalized greeting + balance */}
         <div className="greeting-block fade-in">
           <p className="greeting-text">

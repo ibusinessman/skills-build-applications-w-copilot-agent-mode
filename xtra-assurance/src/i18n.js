@@ -122,6 +122,16 @@ export const translations = {
     no: 'Non',
     language: 'Lang',
 
+    // Dashboard
+    dashboard_title: 'Tablo Bò Xtra',
+    valid_until: 'Valide jiska',
+    claim_amount: 'Montan',
+    claim_moncash: 'MonCash',
+    claim_ref: 'Referans',
+    claim_status: 'Estati',
+    claim_review_msg: '🔍 Anba Revizyon Xtra',
+    claim_review_eta: 'Repons nan 1h pa Xtra Dubai',
+
     // Misc
     chat_support: '💬 Chat Xtra Dubai 24/7',
     wa_support: '💬 Chat Xtra',
@@ -255,6 +265,16 @@ export const translations = {
     yes: 'Oui',
     no: 'Non',
     language: 'Langue',
+
+    // Dashboard
+    dashboard_title: 'Tableau de Bord Xtra',
+    valid_until: "Valide jusqu'au",
+    claim_amount: 'Montant',
+    claim_moncash: 'MonCash',
+    claim_ref: 'Référence',
+    claim_status: 'Statut',
+    claim_review_msg: '🔍 En Révision Xtra',
+    claim_review_eta: 'Réponse dans 1h par Xtra Dubai',
 
     chat_support: '💬 Chat Xtra Dubai 24/7',
     wa_support: '💬 Chat Xtra',

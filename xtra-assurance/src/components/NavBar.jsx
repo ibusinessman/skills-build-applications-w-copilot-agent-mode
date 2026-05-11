@@ -5,7 +5,7 @@ import { useLang } from '../App.jsx';
 export default function NavBar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { t } = useLang();
+  const { t, unreadCount } = useLang();
 
   const items = [
     { path: '/',                 icon: '🏠', labelKey: 'home' },
@@ -24,7 +24,12 @@ export default function NavBar() {
           onClick={() => navigate(path)}
           aria-current={pathname === path ? 'page' : undefined}
         >
-          <span className="nav-icon">{icon}</span>
+          <span className="nav-icon-wrap">
+            <span className="nav-icon">{icon}</span>
+            {labelKey === 'home' && unreadCount > 0 && (
+              <span className="nav-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+            )}
+          </span>
           <span className="nav-label">{t(labelKey)}</span>
         </button>
       ))}

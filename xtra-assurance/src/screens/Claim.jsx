@@ -30,7 +30,7 @@ function StepIndicator({ current, labels }) {
 }
 
 export default function Claim() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [step, setStep]           = useState(0);
   const [scanState, setScanState] = useState('idle'); // idle | scanning | done
   const [amount, setAmount]       = useState('3500');
@@ -43,7 +43,7 @@ export default function Claim() {
   const parsedAmount = parseInt(amount, 10) || 0;
   const autoApprove  = parsedAmount > 0 && parsedAmount < AUTO_APPROVE_THRESHOLD;
 
-  const stepLabels = ['Foto', 'Montan', 'Payout'];
+  const stepLabels = [t('claim_step1'), t('claim_step2'), t('claim_step3')];
 
   const handlePhotoTap = useCallback(() => {
     if (scanState !== 'idle') return;
@@ -144,7 +144,7 @@ export default function Claim() {
 
           <div className="amount-zone">
             <div className="amount-big gold-text" style={{ fontSize: 28, marginBottom: 8 }}>
-              {t('amount_detected')}
+              {parsedAmount > 0 ? `${parsedAmount.toLocaleString()} g` : t('amount_detected')}
             </div>
             <div className={`approval-pill ${autoApprove ? 'auto' : 'review'}`}>
               {autoApprove ? t('approve_auto') : t('approve_review')}
@@ -153,7 +153,7 @@ export default function Claim() {
 
           {/* Editable amount */}
           <div className="moncash-input-group mt-12">
-            <label className="moncash-label" htmlFor="amount-input">Montant (g)</label>
+            <label className="moncash-label" htmlFor="amount-input">{t('amount_label')}</label>
             <input
               id="amount-input"
               type="number"
@@ -166,12 +166,12 @@ export default function Claim() {
           </div>
 
           <div className="moncash-input-group mt-12">
-            <label className="moncash-label" htmlFor="desc-input">Description</label>
+            <label className="moncash-label" htmlFor="desc-input">{t('description_label')}</label>
             <input
               id="desc-input"
               type="text"
               className="moncash-input"
-              placeholder="Ex: Clinique Sainte-Croix, frais médicaux…"
+              placeholder={t('description_placeholder')}
               value={description}
               onChange={e => setDesc(e.target.value)}
             />
@@ -210,29 +210,29 @@ export default function Claim() {
               {result.status === 'paid' ? '💰' : '🔍'}
             </span>
             <p className="payout-confirmed">
-              {result.status === 'paid' ? t('payout_confirmed') : '🔍 En Révision Xtra'}
+              {result.status === 'paid' ? t('payout_confirmed') : t('claim_review_msg')}
             </p>
             <p className="payout-time">
-              {result.status === 'paid' ? t('payout_5min') : 'Réponse dans 1h par Xtra Dubai'}
+              {result.status === 'paid' ? t('payout_5min') : t('claim_review_eta')}
             </p>
 
             <div className="payout-breakdown">
               <div className="payout-row">
-                <span>Montant</span>
+                <span>{t('claim_amount')}</span>
                 <span>{result.amount_gourdes?.toLocaleString()} g</span>
               </div>
               <div className="payout-row">
-                <span>MonCash</span>
+                <span>{t('claim_moncash')}</span>
                 <span>{result.moncash_phone || '—'}</span>
               </div>
               {result.moncash_ref && (
                 <div className="payout-row">
-                  <span>Référence</span>
+                  <span>{t('claim_ref')}</span>
                   <span style={{ fontSize: 11 }}>{result.moncash_ref}</span>
                 </div>
               )}
               <div className="payout-row">
-                <span>Statut</span>
+                <span>{t('claim_status')}</span>
                 <span className={result.status === 'paid' ? 'success-text' : 'gold-text'}>
                   {result.status_display}
                 </span>
@@ -268,7 +268,7 @@ export default function Claim() {
 
         {step === 2 && (
           <button className="btn-gold" onClick={() => { setStep(0); setScanState('idle'); setResult(null); setApiError(null); }}>
-            + Nouveau Sinistre
+            {t('new_claim')}
           </button>
         )}
       </div>

@@ -35,9 +35,10 @@ function SplashScreen() {
 }
 
 export default function App() {
-  const [lang, setLang]       = useState(() => localStorage.getItem('xtra_lang') || 'ht');
-  const [authed, setAuthed]   = useState(() => api.isLoggedIn());
-  const [booting, setBooting] = useState(true);
+  const [lang, setLang]         = useState(() => localStorage.getItem('xtra_lang') || 'ht');
+  const [authed, setAuthed]     = useState(() => api.isLoggedIn());
+  const [booting, setBooting]   = useState(true);
+  const [unreadCount, setUnread] = useState(0);
 
   useEffect(() => {
     localStorage.setItem('xtra_lang', lang);
@@ -55,7 +56,7 @@ export default function App() {
   if (booting) {
     return (
       <HelmetProvider>
-        <LangContext.Provider value={{ lang, setLang, t }}>
+        <LangContext.Provider value={{ lang, setLang, t, unreadCount, setUnread }}>
           <SplashScreen />
         </LangContext.Provider>
       </HelmetProvider>
@@ -65,7 +66,7 @@ export default function App() {
   if (!authed) {
     return (
       <HelmetProvider>
-        <LangContext.Provider value={{ lang, setLang, t }}>
+        <LangContext.Provider value={{ lang, setLang, t, unreadCount, setUnread }}>
           <ToastProvider>
             <div className="app-container login-container">
               <Login onLogin={() => setAuthed(true)} />
@@ -78,7 +79,7 @@ export default function App() {
 
   return (
     <HelmetProvider>
-      <LangContext.Provider value={{ lang, setLang, t }}>
+      <LangContext.Provider value={{ lang, setLang, t, unreadCount, setUnread }}>
         <ToastProvider>
           <BrowserRouter>
             <div className="app-container">

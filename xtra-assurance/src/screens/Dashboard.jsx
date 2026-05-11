@@ -8,14 +8,14 @@ function Spinner() {
   return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gold)', fontSize: 32 }}>⚙️</div>;
 }
 
-function ErrorCard({ msg, onRetry }) {
+function ErrorCard({ msg, onRetry, t }) {
   return (
     <div className="alert-card" style={{ textAlign: 'center' }}>
-      <div className="alert-title">⚠️ Erreur réseau</div>
+      <div className="alert-title">⚠️ {t('error_network')}</div>
       <div className="alert-text">{msg}</div>
       {onRetry && (
         <button className="btn-gold mt-12" onClick={onRetry} style={{ marginTop: 12 }}>
-          Réessayer
+          {t('retry')}
         </button>
       )}
     </div>
@@ -23,7 +23,7 @@ function ErrorCard({ msg, onRetry }) {
 }
 
 export default function Dashboard() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function Dashboard() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <div className="screen"><Spinner /></div>;
-  if (error)   return <div className="screen"><div className="screen-header"><h1 className="screen-title">{t('dashboard_title')}</h1></div><ErrorCard msg={error} onRetry={load} /></div>;
+  if (error)   return <div className="screen"><div className="screen-header"><h1 className="screen-title">{t('dashboard_title')}</h1></div><ErrorCard msg={error} onRetry={load} t={t} /></div>;
 
   const { balance_gourdes, rc_active, risk_score, stats, active_policy, high_risk_zones, recent_claims, unread_notifications } = data;
   const balancePct = Math.min(Math.round((balance_gourdes / 2_000_000) * 100), 100);
@@ -103,7 +103,7 @@ export default function Dashboard() {
         </div>
         {active_policy ? (
           <div className="card-sub" style={{ marginBottom: 12 }}>
-            Valide jusqu'au {active_policy.end_date} · {active_policy.days_remaining}j restants
+            {t('valid_until')} {active_policy.end_date} · {active_policy.days_remaining} {t('days_remaining')}
           </div>
         ) : null}
         <button className="btn-gold" onClick={() => navigate('/xtra-reklamasyon')}>
@@ -132,9 +132,9 @@ export default function Dashboard() {
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
         {[
-          { label: 'Sinistres', value: stats.total_claims },
-          { label: 'Payés',     value: stats.paid_claims },
-          { label: 'Filleuls',  value: stats.total_referrals },
+          { label: t('total_claims'),    value: stats.total_claims },
+          { label: t('paid_claims'),     value: stats.paid_claims },
+          { label: t('total_referrals'), value: stats.total_referrals },
         ].map(s => (
           <div key={s.label} className="card" style={{ textAlign: 'center', padding: '14px 8px' }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--gold)' }}>{s.value}</div>
@@ -176,11 +176,12 @@ export default function Dashboard() {
             <span className="qa-icon">📋</span>
             <span>{t('claim_title')}</span>
           </div>
-          <div className="qa-card" role="button" tabIndex={0}>
+          <div className="qa-card" role="button" tabIndex={0}
+            onClick={() => window.open('https://wa.me/50900000000', '_blank')}>
             <span className="qa-icon">💬</span>
             <span>{t('wa_support')}</span>
           </div>
-          <div className="qa-card" role="button" tabIndex={0}>
+          <div className="qa-card" role="button" tabIndex={0} onClick={() => navigate('/referrals')}>
             <span className="qa-icon">🎁</span>
             <span>{t('referral')}</span>
           </div>
