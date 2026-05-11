@@ -3,8 +3,6 @@ import { useLang } from '../App.jsx';
 import { api } from '../api.js';
 import PageSEO from '../components/PageSEO.jsx';
 
-const AUTO_APPROVE_THRESHOLD = 5000;
-
 function StepIndicator({ current, labels }) {
   return (
     <div className="step-indicator" role="list">
@@ -41,7 +39,6 @@ export default function Claim() {
   const [apiError, setApiError]   = useState(null);
 
   const parsedAmount = parseInt(amount, 10) || 0;
-  const autoApprove  = parsedAmount > 0 && parsedAmount < AUTO_APPROVE_THRESHOLD;
 
   const stepLabels = [t('claim_step1'), t('claim_step2'), t('claim_step3')];
 
@@ -73,8 +70,8 @@ export default function Claim() {
   const canNext1 = parsedAmount > 0 && moncash.length >= 8;
 
   const claimDesc = lang === 'ht'
-    ? 'Soumèt yon reklamasyon asirans mototaxi ann Ayiti ak Xtra Assurance. Reklamasyon mwens pase 5000g apwouve otomatikman epi peye ak MonCash nan 60 segond.'
-    : 'Soumettre une réclamation assurance mototaxi en Haïti avec Xtra Assurance. Réclamations de moins de 5000g approuvées automatiquement et payées via MonCash en 60 secondes.';
+    ? 'Soumèt yon reklamasyon asirans mototaxi ann Ayiti ak Xtra Assurance. Voye prèv ou (foto, videyo, dokiman) epi resevwa peman MonCash aprè revizyon rapid.'
+    : 'Soumettre une réclamation assurance mototaxi en Haïti avec Xtra Assurance. Envoyez vos preuves (photos, vidéos, documents) et recevez votre paiement MonCash après révision rapide.';
 
   return (
     <div className="screen">
@@ -90,7 +87,7 @@ export default function Claim() {
           step: [
             { '@type': 'HowToStep', position: 1, name: 'Skane vignèt ou', text: 'Pran foto vignèt moto ou pou verifikasyon.' },
             { '@type': 'HowToStep', position: 2, name: 'Antre montan ak MonCash', text: 'Esplifye montan domaj la epi antre nimewo MonCash ou.' },
-            { '@type': 'HowToStep', position: 3, name: 'Resevwa peman', text: 'Si reklamasyon an mwens pase 5000g, ou resevwa peman otomatikman nan 60 segond.' },
+            { '@type': 'HowToStep', position: 3, name: 'Resevwa peman', text: 'Ekip Xtra revize prèv ou epi voye peman MonCash dirèkteman nan nimewo ou a.' },
           ],
         }}
       />
@@ -146,9 +143,7 @@ export default function Claim() {
             <div className="amount-big gold-text" style={{ fontSize: 28, marginBottom: 8 }}>
               {parsedAmount > 0 ? `${parsedAmount.toLocaleString()} g` : t('amount_detected')}
             </div>
-            <div className={`approval-pill ${autoApprove ? 'auto' : 'review'}`}>
-              {autoApprove ? t('approve_auto') : t('approve_review')}
-            </div>
+            <div className="approval-pill review">{t('approve_review')}</div>
           </div>
 
           {/* Editable amount */}
@@ -206,15 +201,9 @@ export default function Claim() {
           <p className="step-tech">{t('payout_time')}</p>
 
           <div className="payout-zone">
-            <span className="payout-emoji" role="img" aria-label="money">
-              {result.status === 'paid' ? '💰' : '🔍'}
-            </span>
-            <p className="payout-confirmed">
-              {result.status === 'paid' ? t('payout_confirmed') : t('claim_review_msg')}
-            </p>
-            <p className="payout-time">
-              {result.status === 'paid' ? t('payout_5min') : t('claim_review_eta')}
-            </p>
+            <span className="payout-emoji" role="img" aria-label="review">🔍</span>
+            <p className="payout-confirmed">{t('claim_review_msg')}</p>
+            <p className="payout-time">{t('claim_review_eta')}</p>
 
             <div className="payout-breakdown">
               <div className="payout-row">
@@ -225,17 +214,9 @@ export default function Claim() {
                 <span>{t('claim_moncash')}</span>
                 <span>{result.moncash_phone || '—'}</span>
               </div>
-              {result.moncash_ref && (
-                <div className="payout-row">
-                  <span>{t('claim_ref')}</span>
-                  <span style={{ fontSize: 11 }}>{result.moncash_ref}</span>
-                </div>
-              )}
               <div className="payout-row">
                 <span>{t('claim_status')}</span>
-                <span className={result.status === 'paid' ? 'success-text' : 'gold-text'}>
-                  {result.status_display}
-                </span>
+                <span className="gold-text">{result.status_display}</span>
               </div>
             </div>
           </div>
@@ -262,7 +243,7 @@ export default function Claim() {
             onClick={handleSubmit}
             disabled={!canNext1 || submitting}
           >
-            {submitting ? '⚙️ Dubai AI…' : `✅ ${t('submit_claim')}`}
+            {submitting ? '⚙️ Anba Revizyon…' : `✅ ${t('submit_claim')}`}
           </button>
         )}
 

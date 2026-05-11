@@ -105,15 +105,14 @@ export const api = {
 
   async submitClaim({ amount_gourdes, description, moncash_phone }) {
     if (isDemoMode()) {
-      const autoPay = amount_gourdes < 5000;
       return {
         id: ++_demoClaimId,
         amount_gourdes,
         description,
         moncash_phone,
-        status: autoPay ? 'paid' : 'under_review',
-        status_display: autoPay ? 'Peye ✅' : 'Anba Revizyon 🔍',
-        moncash_ref: autoPay ? `MCX-${Date.now()}` : null,
+        status: 'under_review',
+        status_display: 'Anba Revizyon 🔍',
+        moncash_ref: null,
         created_at: new Date().toISOString(),
       };
     }

@@ -48,10 +48,10 @@ export const DEMO_WALLET = {
   balance_gourdes: 2002900,
   transactions: [
     { id: 1, amount_gourdes:  3500, tx_type: 'claim_payout',   description: 'Payout Sinis #1',   created_at: '2026-05-08T10:24:00Z' },
-    { id: 2, amount_gourdes:  -300, tx_type: 'policy_payment', description: 'RC Pro — Me 2026',  created_at: '2026-05-01T08:00:00Z' },
+    { id: 2, amount_gourdes: -1000, tx_type: 'policy_payment', description: 'RC Pro — Me 2026',  created_at: '2026-05-01T08:00:00Z' },
     { id: 3, amount_gourdes:    50, tx_type: 'referral_bonus', description: 'Bonus Zanmi — Marie', created_at: '2026-04-28T11:30:00Z' },
     { id: 4, amount_gourdes:  1800, tx_type: 'claim_payout',   description: 'Payout Sinis #3',   created_at: '2026-04-29T09:06:00Z' },
-    { id: 5, amount_gourdes:  -300, tx_type: 'policy_payment', description: 'RC Pro — Av 2026',  created_at: '2026-04-01T08:00:00Z' },
+    { id: 5, amount_gourdes: -1000, tx_type: 'policy_payment', description: 'RC Pro — Av 2026',  created_at: '2026-04-01T08:00:00Z' },
     { id: 6, amount_gourdes:  2000000, tx_type: 'credit',      description: 'Sòl Inisyal Xtra',  created_at: '2025-11-01T08:00:00Z' },
   ],
 };
