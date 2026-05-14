@@ -1,0 +1,375 @@
+{
+  "koneksai_claude_routines": {
+    "version": "1.0",
+    "business": "KoneksAI",
+    "market": "Port-au-Prince, Haiti",
+    "routines": [
+
+      {
+        "name": "daily_kpi_sync",
+        "description": "Read Google Sheets analytics data, calculate KPIs, flag issues, send founder email summary.",
+        "trigger": {
+          "type": "schedule",
+          "cron": "0 7 * * *",
+          "timezone": "America/Port-au-Prince"
+        },
+        "connector": "google_sheets",
+        "steps": [
+          {
+            "step": 1,
+            "action": "google_sheets.read_range",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Analytics!A1:G100"
+            },
+            "fallback": "Send alert to founder WhatsApp: 'KPI sync failed — check Sheets connection'"
+          },
+          {
+            "step": 2,
+            "action": "claude.analyze_data",
+            "model": "claude-sonnet-4-6",
+            "parameters": {
+              "system": "You are a business analyst for KoneksAI, a WhatsApp automation agency in Port-au-Prince, Haiti. Analyze the provided metrics and return a structured JSON report.",
+              "prompt": "Analyze this data:\n{{sheets_data}}\n\nCalculate: CAC (total_ad_spend / new_clients), LTV (avg_monthly_revenue * 12), churn_rate, conversion_rate, lead_to_sale_rate.\n\nIf CAC > $20 USD, flag as HIGH_CAC and suggest 2 specific ad copy changes in both French and Haitian Creole.\nIf churn > 10%, flag as HIGH_CHURN and suggest 1 retention action.\n\nReturn JSON: {date, new_leads, new_clients, revenue, ad_spend, CAC, LTV, churn_rate, conversion_rate, flags: [], suggestions: [], summary_en: '', summary_fr: '', summary_ht: ''}",
+              "max_tokens": 1500
+            },
+            "fallback": "Use previous day's averages. Log failure to ErrorLog sheet."
+          },
+          {
+            "step": 3,
+            "action": "google_sheets.append_row",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Analytics!A:G",
+              "values": "{{claude_output.date, new_leads, new_clients, revenue, CAC, LTV, churn_rate}}"
+            },
+            "fallback": "Retry once after 30 seconds."
+          },
+          {
+            "step": 4,
+            "action": "gmail.send",
+            "parameters": {
+              "to": "{{FOUNDER_EMAIL}}",
+              "subject": "📊 KoneksAI Daily Report — {{date}}",
+              "body_html": "{{claude_output.summary_en}}\n\n<b>Flags:</b> {{claude_output.flags}}\n<b>Suggestions:</b> {{claude_output.suggestions}}"
+            },
+            "fallback": "Log to ErrorLog sheet, retry tomorrow."
+          }
+        ]
+      },
+
+      {
+        "name": "lead_qualify_and_respond",
+        "description": "When a new lead arrives via webhook, Claude qualifies them and generates a personalized first response in the correct language.",
+        "trigger": {
+          "type": "webhook",
+          "path": "/qualify-lead",
+          "method": "POST"
+        },
+        "connector": "webhook + claude + whatsapp",
+        "steps": [
+          {
+            "step": 1,
+            "action": "claude.classify",
+            "model": "claude-haiku-4-5-20251001",
+            "parameters": {
+              "system": "You are a lead qualifier for KoneksAI. Classify incoming leads quickly.",
+              "prompt": "Lead data: name={{name}}, phone={{phone}}, message={{message}}, source={{source}}\n\nDetect: 1) language (en/fr/ht), 2) business_type (restaurant/pharmacy/boutique/salon/school/clinic/other), 3) qualification_score 1-10 (10=ready to buy), 4) primary_pain_point.\n\nReturn JSON only: {lang, business_type, score, pain_point, recommended_response_tone}",
+              "max_tokens": 300
+            },
+            "fallback": "Default lang=ht, score=5, business_type=other"
+          },
+          {
+            "step": 2,
+            "action": "claude.generate_response",
+            "model": "claude-haiku-4-5-20251001",
+            "parameters": {
+              "system": "You are a WhatsApp sales agent for KoneksAI in Port-au-Prince, Haiti. Be warm, specific, and results-focused. Never use generic greetings.",
+              "prompt": "Generate a WhatsApp first response for:\n- Name: {{name}}\n- Business type: {{business_type}}\n- Language: {{lang}}\n- Pain point: {{pain_point}}\n- Tone: {{tone}}\n\nThe message should: 1) acknowledge their specific business, 2) mention one specific result KoneksAI delivers for their business type, 3) ask one qualifying question. Max 3 sentences. Return message text only.",
+              "max_tokens": 200
+            },
+            "fallback": "Use static template from TEMPLATES[lang][business_type]"
+          },
+          {
+            "step": 3,
+            "action": "whatsapp.send_message",
+            "parameters": {
+              "to": "{{phone}}",
+              "body": "{{claude_response}}"
+            },
+            "sla": "within 60 seconds of lead arrival",
+            "fallback": "Log to FailedMessages sheet, retry in 5 minutes, then alert founder."
+          },
+          {
+            "step": 4,
+            "action": "google_sheets.update_lead",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "phone": "{{phone}}",
+              "fields": {
+                "lang": "{{lang}}",
+                "business_type": "{{business_type}}",
+                "score": "{{score}}",
+                "status": "contacted",
+                "first_response_at": "{{timestamp}}"
+              }
+            }
+          }
+        ]
+      },
+
+      {
+        "name": "weekly_content_generation",
+        "description": "Every Sunday, Claude generates a full week of social media content for Facebook, Instagram, and WhatsApp Status.",
+        "trigger": {
+          "type": "schedule",
+          "cron": "0 20 * * 0",
+          "timezone": "America/Port-au-Prince"
+        },
+        "connector": "google_sheets + google_drive + claude",
+        "steps": [
+          {
+            "step": 1,
+            "action": "google_sheets.read_range",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Content_Calendar!A1:F100"
+            },
+            "description": "Read last 4 weeks of content for context on what performed best"
+          },
+          {
+            "step": 2,
+            "action": "claude.generate_content_week",
+            "model": "claude-sonnet-4-6",
+            "parameters": {
+              "system": "You are the content strategist for KoneksAI, a WhatsApp automation agency in Port-au-Prince, Haiti. Write content that resonates with Haitian business owners. Be specific, local, credible. Never generic.",
+              "prompt": "Generate a full week of social media content (7 posts) for KoneksAI.\n\nBusiness context: KoneksAI helps Port-au-Prince SMEs (restaurants, boutiques, pharmacies, salons) set up WhatsApp automation. $75 setup + $50/month.\n\nSchedule:\n- Monday: storytelling carousel (client transformation story)\n- Tuesday: B-roll reel caption (behind the scenes setup)\n- Wednesday: talking-head teaching (1 WhatsApp tip)\n- Thursday: quote reel (inspirational business quote)\n- Friday: offer explainer (KoneksAI service breakdown)\n- Saturday: lifestyle B-roll (soft CTA)\n- Sunday: poll/question (engagement, asks audience)\n\nFor each day provide:\n1. Caption in Haitian Creole (primary)\n2. Caption in French\n3. Caption in English\n4. 5 hashtags (Haiti-specific)\n5. CTA\n6. Visual direction (what to film/design)\n\nMake it specific to one business type per day. Rotate: Mon=restaurant, Tue=boutique, Wed=pharmacy, Thu=salon, Fri=all SMEs, Sat=school, Sun=all.\n\nReturn as JSON array of 7 post objects.",
+              "max_tokens": 3000
+            }
+          },
+          {
+            "step": 3,
+            "action": "google_sheets.append_rows",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Content_Calendar!A:F",
+              "values": "{{content_week_data}}"
+            }
+          },
+          {
+            "step": 4,
+            "action": "google_drive.create_document",
+            "parameters": {
+              "title": "KoneksAI Content Week {{week_number}} — {{start_date}}",
+              "folder_id": "{{DRIVE_FOLDER_ID}}",
+              "content": "{{formatted_content_week}}"
+            },
+            "description": "Save the week's content as a Google Doc for team review"
+          }
+        ]
+      },
+
+      {
+        "name": "objection_handler",
+        "description": "When a lead sends an objection message, Claude generates a personalized response.",
+        "trigger": {
+          "type": "webhook",
+          "path": "/handle-objection",
+          "method": "POST"
+        },
+        "connector": "claude + whatsapp + google_sheets",
+        "steps": [
+          {
+            "step": 1,
+            "action": "claude.classify_objection",
+            "model": "claude-haiku-4-5-20251001",
+            "parameters": {
+              "prompt": "Classify this WhatsApp message as an objection type:\nMessage: {{message}}\nLanguage: {{lang}}\n\nObjection types: price_too_high / dont_need_it / need_to_think / not_sure_it_works / bad_timing / other\n\nReturn JSON: {objection_type, confidence, key_concern}",
+              "max_tokens": 150
+            }
+          },
+          {
+            "step": 2,
+            "action": "claude.generate_objection_response",
+            "model": "claude-haiku-4-5-20251001",
+            "parameters": {
+              "prompt": "Generate a WhatsApp response to handle this objection.\nObjection: {{objection_type}}\nKey concern: {{key_concern}}\nBusiness type: {{business_type}}\nLanguage: {{lang}}\n\nRules:\n- Acknowledge the concern (don't dismiss it)\n- Reframe with a specific result for their business type\n- Include one social proof element\n- End with a low-commitment next step\n- Max 4 sentences\n- Write in {{lang}}\n\nFor price_too_high: emphasize ROI (1 new customer/week pays for the service)\nFor dont_need_it: ask a question that reveals the pain they haven't admitted\nFor need_to_think: offer a 7-day free setup trial\n\nReturn message text only.",
+              "max_tokens": 250
+            }
+          },
+          {
+            "step": 3,
+            "action": "whatsapp.send_message",
+            "parameters": {
+              "to": "{{phone}}",
+              "body": "{{response}}"
+            }
+          },
+          {
+            "step": 4,
+            "action": "google_sheets.log_objection",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Leads!K:K",
+              "value": "{{objection_type}}"
+            }
+          }
+        ]
+      },
+
+      {
+        "name": "testimonial_collection",
+        "description": "30 days after client onboarding, Claude generates a personalized testimonial request and processes the response.",
+        "trigger": {
+          "type": "webhook",
+          "path": "/request-testimonial",
+          "method": "POST"
+        },
+        "connector": "claude + whatsapp + google_sheets + google_drive",
+        "steps": [
+          {
+            "step": 1,
+            "action": "claude.generate_testimonial_request",
+            "model": "claude-haiku-4-5-20251001",
+            "parameters": {
+              "prompt": "Generate a WhatsApp testimonial request message for:\n- Client name: {{name}}\n- Business type: {{business_type}}\n- Service used: KoneksAI WhatsApp automation\n- Language: {{lang}}\n- Days since onboarding: {{days}}\n\nMake it personal, specific to their business type, and low-friction (they can reply with a voice note or text). Max 3 sentences. Return message only.",
+              "max_tokens": 200
+            }
+          },
+          {
+            "step": 2,
+            "action": "whatsapp.send_message",
+            "parameters": {
+              "to": "{{phone}}",
+              "body": "{{request_message}}"
+            }
+          },
+          {
+            "step": 3,
+            "action": "google_sheets.update_client_status",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "field": "testimonial_requested_at",
+              "value": "{{timestamp}}"
+            }
+          }
+        ]
+      },
+
+      {
+        "name": "ad_performance_analysis",
+        "description": "Weekly analysis of Meta Ads performance with Claude-generated optimization recommendations.",
+        "trigger": {
+          "type": "schedule",
+          "cron": "0 8 * * 1",
+          "timezone": "America/Port-au-Prince"
+        },
+        "connector": "google_sheets + claude + gmail",
+        "steps": [
+          {
+            "step": 1,
+            "action": "google_sheets.read_range",
+            "parameters": {
+              "spreadsheet_id": "{{SHEET_ID}}",
+              "range": "Analytics!A1:G30",
+              "description": "Read last 7 days of ad spend and lead data"
+            }
+          },
+          {
+            "step": 2,
+            "action": "claude.analyze_ads",
+            "model": "claude-sonnet-4-6",
+            "parameters": {
+              "prompt": "Analyze this week's Meta Ads performance for KoneksAI (Port-au-Prince, Haiti market):\n{{ad_data}}\n\nProvide:\n1. Which ad variant performed best (CTR, CPL)\n2. Which audience segment had lowest CAC\n3. 3 specific A/B test suggestions for next week\n4. Copy adjustments for underperforming ads (rewrite in FR and HT)\n5. Budget reallocation recommendation\n\nReturn structured JSON with: winner_variant, best_audience, ab_tests, copy_rewrites, budget_plan",
+              "max_tokens": 1000
+            }
+          },
+          {
+            "step": 3,
+            "action": "gmail.send",
+            "parameters": {
+              "to": "{{FOUNDER_EMAIL}}",
+              "subject": "📈 KoneksAI Weekly Ads Report — Week {{week_number}}",
+              "body_html": "{{formatted_ad_analysis}}"
+            }
+          }
+        ]
+      }
+    ],
+
+    "connector_registry": {
+      "google_sheets": {
+        "auth": "OAuth2 service account",
+        "spreadsheet_id_env": "KONEKSAI_SHEET_ID",
+        "fallback": "Local CSV cache, sync when reconnected"
+      },
+      "gmail": {
+        "auth": "OAuth2",
+        "sender": "{{FOUNDER_EMAIL}}",
+        "fallback": "WhatsApp alert to founder"
+      },
+      "whatsapp": {
+        "provider": "Meta WhatsApp Business API",
+        "auth": "Bearer token",
+        "phone_number_id_env": "WA_PHONE_NUMBER_ID",
+        "fallback": "Log to FailedMessages sheet, retry 3x with 5min backoff"
+      },
+      "google_drive": {
+        "auth": "OAuth2 service account",
+        "folder_id_env": "KONEKSAI_DRIVE_FOLDER_ID",
+        "fallback": "Save as Google Sheets tab instead"
+      },
+      "claude": {
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "default_model": "claude-haiku-4-5-20251001",
+        "premium_model": "claude-sonnet-4-6",
+        "fallback": "Static templates from TEMPLATES constant"
+      }
+    },
+
+    "templates": {
+      "first_response": {
+        "restaurant": {
+          "ht": "Bonjou {{name}}! Nou wè ou gen yon restoran nan Pòtoprens. KoneksAI ka ede ou reponn kliyan sou WhatsApp otomatikman — menm lè ou okipe. Èske ou ta renmen wè kijan sa travay pou restoran tankou pa ou?",
+          "fr": "Bonjour {{name}}! Nous voyons que vous avez un restaurant à Port-au-Prince. KoneksAI peut vous aider à répondre automatiquement à vos clients sur WhatsApp — même quand vous êtes occupé. Voulez-vous voir comment cela fonctionne pour un restaurant comme le vôtre?",
+          "en": "Hello {{name}}! We see you have a restaurant in Port-au-Prince. KoneksAI can help you automatically respond to customers on WhatsApp — even when you're busy. Would you like to see how this works for a restaurant like yours?"
+        },
+        "pharmacy": {
+          "ht": "Bonjou {{name}}! Pou yon famasi nan Pòtoprens, WhatsApp otomasyyon ka ede kliyan ou yo jwenn enfòmasyon sou medikaman ak lè ou louvri san yo pa bezwen tann. Kijan sa ta ede biznis ou?",
+          "fr": "Bonjour {{name}}! Pour une pharmacie à Port-au-Prince, l'automatisation WhatsApp peut aider vos clients à obtenir des informations sur les médicaments et vos horaires sans attendre. Comment cela pourrait-il aider votre activité?",
+          "en": "Hello {{name}}! For a pharmacy in Port-au-Prince, WhatsApp automation can help your customers get medication info and your hours without waiting. How could that help your business?"
+        },
+        "boutique": {
+          "ht": "Bonjou {{name}}! Yon boutik ki reponn kliyan nan 30 segonn sou WhatsApp vann 3x plis pase youn ki pa fè sa. KoneksAI ka mete sa an plas pou ou nan 48 è. Èske ou ta renmen wè yon demo?",
+          "fr": "Bonjour {{name}}! Une boutique qui répond aux clients en 30 secondes sur WhatsApp vend 3x plus qu'une qui ne le fait pas. KoneksAI peut mettre cela en place pour vous en 48h. Voulez-vous voir une démo?",
+          "en": "Hello {{name}}! A boutique that responds to customers within 30 seconds on WhatsApp sells 3x more than one that doesn't. KoneksAI can set this up for you in 48 hours. Want to see a demo?"
+        },
+        "salon": {
+          "ht": "Bonjou {{name}}! Pou yon salon nan Pòtoprens, otomasyyon randevou sou WhatsApp ka elimine apèl rate ak randevou manke. KoneksAI ka konfigire sa pou ou. Ki jou ou lib pou nou pale?",
+          "fr": "Bonjour {{name}}! Pour un salon à Port-au-Prince, l'automatisation des rendez-vous sur WhatsApp peut éliminer les appels manqués et les rendez-vous ratés. KoneksAI peut configurer cela pour vous. Quel jour êtes-vous disponible pour en parler?",
+          "en": "Hello {{name}}! For a salon in Port-au-Prince, WhatsApp appointment automation can eliminate missed calls and no-shows. KoneksAI can set this up for you. What day works for a quick call?"
+        },
+        "other": {
+          "ht": "Bonjou {{name}}! Mèsi pou kontakte nou. KoneksAI ede biznis Pòtoprens yo reponn kliyan sou WhatsApp otomatikman ak jwenn plis vant. Kijan nou ka ede biznis ou?",
+          "fr": "Bonjour {{name}}! Merci de nous avoir contactés. KoneksAI aide les entreprises de Port-au-Prince à répondre automatiquement aux clients sur WhatsApp et à augmenter leurs ventes. Comment pouvons-nous aider votre entreprise?",
+          "en": "Hello {{name}}! Thanks for reaching out. KoneksAI helps Port-au-Prince businesses automatically respond to customers on WhatsApp and grow their sales. How can we help your business?"
+        }
+      },
+      "objection_price_too_high": {
+        "ht": "Mwen konprann ou — $50 pa mwa se yon desizyon serye. Men konsidere sa: si otomasyyon nou an pote ou jis 1 kliyan nouvo pa semèn (ki trè konsèvatif), sa kouvri tout pri a. Kijan ou kalkile valè yon kliyan mwayen pou {{business_type}} ou?",
+        "fr": "Je comprends — 50$ par mois est une décision sérieuse. Mais considérez ceci: si notre automatisation vous apporte juste 1 nouveau client par semaine (très conservateur), ça couvre tout le coût. Comment calculez-vous la valeur d'un client moyen pour votre {{business_type}}?",
+        "en": "I understand — $50/month is a real decision. But consider: if our automation brings you just 1 new customer per week (very conservative), that covers the entire cost. How do you calculate the value of an average customer for your {{business_type}}?"
+      },
+      "objection_dont_need_it": {
+        "ht": "Satisfè de sa — èske sa vle di ou reponn chak mesaj WhatsApp nan mwens pase yon minit, 7 jou pa semèn, menm lè ou dòmi? Paske se egzakteman sa kliyan yo espere jodi a.",
+        "fr": "Content pour vous — est-ce que ça veut dire que vous répondez à chaque message WhatsApp en moins d'une minute, 7 jours par semaine, même quand vous dormez? Parce que c'est exactement ce que les clients attendent aujourd'hui.",
+        "en": "Great to hear — does that mean you're responding to every WhatsApp message in under a minute, 7 days a week, even while sleeping? Because that's exactly what customers expect today."
+      },
+      "objection_need_to_think": {
+        "ht": "Pafètman rezonab. Pou elimine risk la nèt, nou ofri yon eseye 7 jou gratis — nou konfigire tout bagay pou ou, ou wè rezilta yo reyèl, epi sèlman apre sa ou deside. Kisa ou di?",
+        "fr": "Parfaitement raisonnable. Pour éliminer tout risque, nous offrons un essai gratuit de 7 jours — nous tout configurons pour vous, vous voyez de vrais résultats, puis vous décidez seulement après. Qu'en dites-vous?",
+        "en": "Completely reasonable. To eliminate all risk, we offer a 7-day free trial — we set everything up for you, you see real results, then you decide afterward. What do you say?"
+      }
+    }
+  }
+}

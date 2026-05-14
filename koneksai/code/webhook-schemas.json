@@ -1,0 +1,285 @@
+{
+  "koneksai_webhook_schemas": {
+    "version": "1.0",
+    "base_url": "https://YOUR_N8N_INSTANCE/webhook",
+
+    "schemas": {
+
+      "lead_incoming": {
+        "path": "/haiti-lead-capture",
+        "method": "POST",
+        "description": "Fires when a new lead submits the contact form, sends a WhatsApp message, or clicks a Meta Lead Ad",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-KoneksAI-Source": "string (form|whatsapp|meta_ad|referral|direct)"
+        },
+        "body": {
+          "name": {
+            "type": "string",
+            "required": true,
+            "max_length": 100,
+            "example": "Marie Joseph"
+          },
+          "phone": {
+            "type": "string",
+            "required": true,
+            "format": "E.164",
+            "example": "+50931234567",
+            "note": "Haiti country code +509"
+          },
+          "lang": {
+            "type": "string",
+            "required": false,
+            "enum": ["ht", "fr", "en"],
+            "default": "ht",
+            "example": "ht"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "enum": ["form", "whatsapp", "meta_ad", "referral", "direct"],
+            "example": "meta_ad"
+          },
+          "business_type": {
+            "type": "string",
+            "required": false,
+            "enum": ["restaurant", "pharmacy", "boutique", "salon", "school", "clinic", "other"],
+            "example": "restaurant"
+          },
+          "message": {
+            "type": "string",
+            "required": false,
+            "max_length": 500,
+            "example": "Mwen vle konnen plis sou sèvis ou yo"
+          },
+          "ad_id": {
+            "type": "string",
+            "required": false,
+            "description": "Meta Ad ID if lead came from a paid ad",
+            "example": "120213456789"
+          },
+          "referrer_phone": {
+            "type": "string",
+            "required": false,
+            "description": "Phone of referring client if referral",
+            "example": "+50939876543"
+          }
+        },
+        "response": {
+          "success": {
+            "status": 200,
+            "body": {
+              "status": "received",
+              "lead_id": "string",
+              "estimated_response_time": "60 seconds"
+            }
+          },
+          "error": {
+            "status": 400,
+            "body": {
+              "status": "error",
+              "message": "string",
+              "missing_fields": ["array of missing required fields"]
+            }
+          }
+        }
+      },
+
+      "payment_confirmed": {
+        "path": "/payment-confirmed",
+        "method": "POST",
+        "description": "MonCash IPN (Instant Payment Notification) — fires when a payment is completed or fails",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-MonCash-Signature": "string (HMAC-SHA256 signature)"
+        },
+        "body": {
+          "transaction_id": {
+            "type": "string",
+            "required": true,
+            "example": "MC-2024-001234"
+          },
+          "order_id": {
+            "type": "string",
+            "required": true,
+            "description": "Your internal order reference",
+            "example": "KAI-ORD-0042"
+          },
+          "amount": {
+            "type": "number",
+            "required": true,
+            "currency": "USD",
+            "example": 75.00
+          },
+          "status": {
+            "type": "string",
+            "required": true,
+            "enum": ["success", "failed", "pending", "refunded"],
+            "example": "success"
+          },
+          "customer_phone": {
+            "type": "string",
+            "required": true,
+            "format": "E.164",
+            "example": "+50931234567"
+          },
+          "customer_name": {
+            "type": "string",
+            "required": false,
+            "example": "Marie Joseph"
+          },
+          "payment_type": {
+            "type": "string",
+            "required": false,
+            "enum": ["setup_fee", "monthly_basic", "monthly_premium"],
+            "example": "setup_fee"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "ISO8601",
+            "required": true,
+            "example": "2024-01-15T14:32:00-05:00"
+          }
+        },
+        "response": {
+          "success": {
+            "status": 200,
+            "body": "OK"
+          }
+        },
+        "security_note": "Verify X-MonCash-Signature with HMAC-SHA256 using your MonCash secret key before processing"
+      },
+
+      "fulfillment_trigger": {
+        "path": "/trigger-fulfillment",
+        "method": "POST",
+        "description": "Internal webhook fired by the MonCash IPN handler to trigger client onboarding",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": "string (shared secret between GAS and n8n)"
+        },
+        "body": {
+          "phone": {
+            "type": "string",
+            "required": true,
+            "example": "+50931234567"
+          },
+          "client_name": {
+            "type": "string",
+            "required": true,
+            "example": "Marie Joseph"
+          },
+          "business_type": {
+            "type": "string",
+            "required": true,
+            "example": "restaurant"
+          },
+          "service_tier": {
+            "type": "string",
+            "required": true,
+            "enum": ["basic", "premium"],
+            "example": "basic"
+          },
+          "lang": {
+            "type": "string",
+            "required": true,
+            "enum": ["ht", "fr", "en"],
+            "example": "ht"
+          },
+          "setup_guide_url": {
+            "type": "string",
+            "required": false,
+            "description": "Google Drive link to client-specific setup guide",
+            "example": "https://drive.google.com/file/d/..."
+          },
+          "payment_transaction_id": {
+            "type": "string",
+            "required": true,
+            "example": "MC-2024-001234"
+          }
+        },
+        "response": {
+          "success": {
+            "status": 200,
+            "body": {
+              "status": "fulfillment_started",
+              "onboarding_message_sent": true
+            }
+          }
+        }
+      },
+
+      "kpi_sync": {
+        "path": "/sync-kpis",
+        "method": "POST",
+        "description": "Triggered by daily cron to sync KPIs from Google Sheets to analytics dashboard",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Cron-Secret": "string"
+        },
+        "body": {
+          "date": {
+            "type": "string",
+            "format": "YYYY-MM-DD",
+            "required": true,
+            "example": "2024-01-15"
+          },
+          "force_recalculate": {
+            "type": "boolean",
+            "required": false,
+            "default": false
+          }
+        },
+        "response": {
+          "success": {
+            "status": 200,
+            "body": {
+              "status": "synced",
+              "metrics": {
+                "new_leads": "number",
+                "new_clients": "number",
+                "revenue_usd": "number",
+                "ad_spend_usd": "number",
+                "cac_usd": "number",
+                "ltv_usd": "number",
+                "churn_rate_pct": "number",
+                "conversion_rate_pct": "number",
+                "flags": ["array of alert strings"]
+              }
+            }
+          }
+        }
+      },
+
+      "objection_handler": {
+        "path": "/handle-objection",
+        "method": "POST",
+        "description": "Fired when a WhatsApp reply contains an objection. Claude classifies and responds.",
+        "body": {
+          "phone": {"type": "string", "required": true},
+          "message": {"type": "string", "required": true, "description": "The objection message text"},
+          "lang": {"type": "string", "required": false, "default": "ht"},
+          "business_type": {"type": "string", "required": false},
+          "conversation_stage": {
+            "type": "string",
+            "enum": ["first_contact", "follow_up_1", "follow_up_2", "offer_sent"],
+            "required": false
+          }
+        }
+      },
+
+      "referral_trigger": {
+        "path": "/trigger-referral",
+        "method": "POST",
+        "description": "Fired 30 days after client onboarding to request a referral",
+        "body": {
+          "client_phone": {"type": "string", "required": true},
+          "client_name": {"type": "string", "required": true},
+          "business_type": {"type": "string", "required": true},
+          "lang": {"type": "string", "required": true},
+          "days_since_onboarding": {"type": "number", "required": true}
+        }
+      }
+    }
+  }
+}
