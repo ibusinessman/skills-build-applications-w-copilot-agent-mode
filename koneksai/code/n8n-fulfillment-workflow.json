@@ -1,0 +1,809 @@
+{
+  "name": "KoneksAI — Fulfillment After Payment",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-confirmed",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "node-webhook-payment",
+      "name": "Webhook: Payment Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 400],
+      "webhookId": "koneksai-payment-confirmed-001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"processing\", \"transaction_id\": $json[\"transaction_id\"] }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-payment",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [440, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate MonCash IPN payload\nconst body = $input.first().json;\nconst errors = [];\n\n// Required field validation\nif (!body.transaction_id || typeof body.transaction_id !== 'string' || body.transaction_id.trim() === '') {\n  errors.push('Missing or invalid transaction_id');\n}\nif (!body.amount || typeof body.amount !== 'number' || body.amount <= 0) {\n  errors.push('Missing or invalid amount (must be positive number in HTG)');\n}\nif (!body.status || typeof body.status !== 'string') {\n  errors.push('Missing status field');\n}\nif (!body.customer_phone || typeof body.customer_phone !== 'string') {\n  errors.push('Missing customer_phone');\n}\n\n// Validate phone format (E.164)\nconst phoneRegex = /^\\+[1-9]\\d{7,14}$/;\nif (body.customer_phone && !phoneRegex.test(body.customer_phone)) {\n  errors.push('customer_phone must be in E.164 format (e.g. +50941234567)');\n}\n\n// Validate status\nconst validStatuses = ['success', 'failed', 'pending', 'cancelled', 'refunded'];\nif (body.status && !validStatuses.includes(body.status)) {\n  errors.push(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);\n}\n\nif (errors.length > 0) {\n  throw new Error(`Validation failed: ${errors.join('; ')}`);\n}\n\nreturn [{ json: {\n  ...body,\n  validated_at: new Date().toISOString(),\n  is_valid: true\n} }];"
+      },
+      "id": "node-validate-payment",
+      "name": "Validate Payment Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "success"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-check-payment-status",
+      "name": "Payment Status = success?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log non-success payment and halt\nconst body = $input.first().json;\nconsole.log(`Payment not processed: status=${body.status}, transaction_id=${body.transaction_id}`);\n\n// Return data for the error log branch\nreturn [{ json: {\n  log_type: 'payment_skipped',\n  reason: `Payment status is '${body.status}', not 'success'. No fulfillment triggered.`,\n  transaction_id: body.transaction_id,\n  timestamp: new Date().toISOString()\n} }];"
+      },
+      "id": "node-log-non-success",
+      "name": "Log Non-Success Payment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 540]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Payments",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "transaction_id": "={{ $json.transaction_id }}",
+            "timestamp": "={{ $json.timestamp || $now.toISO() }}",
+            "client_phone": "={{ $json.customer_phone }}",
+            "client_name": "={{ $json.customer_name || 'Unknown' }}",
+            "amount_htg": "={{ $json.amount }}",
+            "amount_usd": "={{ $json.amount_usd || ($json.amount / 154) }}",
+            "package": "={{ $json.package || 'starter' }}",
+            "status": "={{ $json.status }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-log-payment-sheet",
+      "name": "Sheets: Log Payment",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [920, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Look up lead data from Sheets to get name and lang\n// This node merges payment data with lead context\nconst payment = $input.first().json;\n\n// Generate fulfillment ID\nconst fulfillment_id = `fulfill-${Date.now()}-${Math.random().toString(36).substr(2,9)}`;\n\n// Generate referral code for this client\nconst phone = payment.customer_phone || '';\nconst refCode = 'KNX-' + phone.replace('+', '').slice(-6).toUpperCase();\n\n// Build the client row data\nconst client_id = `client-${Date.now()}-${Math.random().toString(36).substr(2,9)}`;\n\nreturn [{ json: {\n  ...payment,\n  fulfillment_id,\n  client_id,\n  referral_code: refCode,\n  onboard_date: new Date().toISOString().split('T')[0],\n  client_lang: payment.lang || 'HT',\n  client_segment: payment.segment || 'other',\n  setup_guide_url: process.env.SETUP_GUIDE_DRIVE_URL || 'https://drive.google.com/file/d/SETUP_GUIDE_FILE_ID/view?usp=sharing'\n} }];"
+      },
+      "id": "node-enrich-fulfillment",
+      "name": "Enrich with Client Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clients",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "client_id": "={{ $json.client_id }}",
+            "onboard_date": "={{ $json.onboard_date }}",
+            "name": "={{ $json.customer_name || 'Client' }}",
+            "phone": "={{ $json.customer_phone }}",
+            "lang": "={{ $json.client_lang }}",
+            "segment": "={{ $json.client_segment }}",
+            "package": "={{ $json.package || 'starter' }}",
+            "monthly_revenue_htg": "={{ $json.amount }}",
+            "status": "=onboarding",
+            "referral_code": "={{ $json.referral_code }}",
+            "referred_by": "=",
+            "notes": "=Auto-onboarded via MonCash IPN"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-add-client-sheet",
+      "name": "Sheets: Add to Clients",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1400, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build language-appropriate onboarding WhatsApp message\nconst client = $input.first().json;\nconst name = (client.customer_name || 'Kliyan').split(' ')[0];\nconst lang = client.client_lang || 'HT';\nconst pkg = client.package || 'starter';\nconst guideUrl = client.setup_guide_url;\n\nconst packageNames = {\n  HT: { starter: 'Estàtè', growth: 'Kwasans', pro: 'Pro', custom: 'Pèsonalize' },\n  FR: { starter: 'Starter', growth: 'Croissance', pro: 'Pro', custom: 'Personnalisé' },\n  EN: { starter: 'Starter', growth: 'Growth', pro: 'Pro', custom: 'Custom' }\n};\n\nconst pkgName = (packageNames[lang] || packageNames.HT)[pkg] || pkg;\n\nconst messages = {\n  HT: `🎉 Byenveni nan fanmi KoneksAI, ${name}!\n\nPeman ou konfime ✅ — Pakè ${pkgName} ou aktif kounye a!\n\nVoici premye etap ou yo:\n\n📖 *Gid Konfigirasyon ou*:\n${guideUrl}\n\n📋 Sa ou bezwen fè:\n1. Telechaje gid la\n2. Suiv etap 1 ak 2 jodia\n3. Mwen pral kontakte ou nan 7 jou pou asire tout bagay ap travay\n\n🚀 Ou pare! Kèsyon? Tou senpleman reponn mesaj sa a.\n\nMèsi pou konfyans ou — n ap grandi ansanm! 🇭🇹`,\n  FR: `🎉 Bienvenue dans la famille KoneksAI, ${name}!\n\nVotre paiement est confirmé ✅ — Votre Pack ${pkgName} est maintenant actif!\n\nVoici vos premières étapes:\n\n📖 *Votre Guide de Configuration*:\n${guideUrl}\n\n📋 À faire:\n1. Téléchargez le guide\n2. Suivez les étapes 1 et 2 aujourd'hui\n3. Je vous contacterai dans 7 jours pour vérifier que tout fonctionne\n\n🚀 Vous êtes prêt! Des questions? Répondez simplement à ce message.\n\nMerci pour votre confiance — grandissons ensemble! 🇭🇹`,\n  EN: `🎉 Welcome to the KoneksAI family, ${name}!\n\nYour payment is confirmed ✅ — Your ${pkgName} Package is now active!\n\nHere are your first steps:\n\n📖 *Your Setup Guide*:\n${guideUrl}\n\n📋 To do:\n1. Download the guide\n2. Follow steps 1 and 2 today\n3. I'll contact you in 7 days to make sure everything is working\n\n🚀 You're all set! Questions? Just reply to this message.\n\nThank you for your trust — let's grow together! 🇭🇹`\n};\n\nreturn [{ json: { ...client, onboarding_message: messages[lang] || messages.HT } }];"
+      },
+      "id": "node-build-onboarding-msg",
+      "name": "Build Onboarding Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": {{ JSON.stringify($json.onboarding_message) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-onboarding",
+      "name": "WhatsApp: Onboarding Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1880, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "=sold",
+            "last_contact_date": "={{ $now.toISO() }}",
+            "notes": "=Onboarding message sent. Fulfillment ID: {{ $json.fulfillment_id }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.customer_phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-update-lead-sold",
+      "name": "Sheets: Update Lead → Sold",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2120, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "days",
+        "amount": 7
+      },
+      "id": "node-wait-7days",
+      "name": "Wait 7 Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2360, 400],
+      "webhookId": "koneksai-fulfill-wait7-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build 7-day check-in message\nconst client = $input.first().json;\nconst name = (client.customer_name || 'Kliyan').split(' ')[0];\nconst lang = client.client_lang || 'HT';\n\nconst messages = {\n  HT: `Bonjou ${name}! 👋\n\nSèt jou depi nou kòmanse ansanm — kijan sa ap pase?\n\n✅ WhatsApp otomatik ou ap mache?\n✅ Ou te resevwa premye repons otomatik ou yo?\n\nSi ou gen nenpòt kèsyon oswa bezwen èd, mwen la pou ou!\n\nMete m okouran — kijan afè yo ap ale? 📊`,\n  FR: `Bonjour ${name}! 👋\n\nSept jours depuis que nous avons commencé ensemble — comment ça se passe?\n\n✅ Votre WhatsApp automatique fonctionne-t-il?\n✅ Avez-vous reçu vos premières réponses automatiques?\n\nSi vous avez des questions ou besoin d'aide, je suis là pour vous!\n\nTenez-moi informé — comment vont les affaires? 📊`,\n  EN: `Hello ${name}! 👋\n\nSeven days since we started together — how's it going?\n\n✅ Is your WhatsApp automation working?\n✅ Have you received your first automated responses?\n\nIf you have any questions or need help, I'm here for you!\n\nKeep me posted — how are things going? 📊`\n};\n\nreturn [{ json: { ...client, checkin_message: messages[lang] || messages.HT } }];"
+      },
+      "id": "node-build-checkin",
+      "name": "Build 7-Day Check-in",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.checkin_message) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-checkin",
+      "name": "WhatsApp: 7-Day Check-in",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2840, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clients",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "=active",
+            "notes": "=7-day check-in sent {{ $now.toISO() }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.customer_phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-update-client-active",
+      "name": "Sheets: Status → Active",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3080, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "days",
+        "amount": 23
+      },
+      "id": "node-wait-23days",
+      "name": "Wait 23 More Days (Day 30)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [3320, 400],
+      "webhookId": "koneksai-fulfill-wait23-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Day 30 testimonial request message\nconst client = $input.first().json;\nconst name = (client.customer_name || 'Kliyan').split(' ')[0];\nconst lang = client.client_lang || 'HT';\nconst refCode = client.referral_code || 'KNX-000000';\n\nconst messages = {\n  HT: `${name}! 🙏\n\nEn mwa depi ou kòmanse ak KoneksAI — eske ou kontan ak rezilta yo?\n\nNou renmen tande kliyan nou yo. Eske ou ka pataje eksperyans ou?\n\n⭐ *Kite yon temwayaj kout* (1-2 fraz) — repond dirèkteman nan mesaj sa a!\n\nBon tou: partaje kod referans ou ak yon zanmi ou:\n🎁 *Kòd ou*: ${refCode}\nZanmi ou jwenn 20% rabè, ou jwenn 20% rabè sou pwochen mwa ou!\n\nMèsi pou konfyans ou! 🇭🇹`,\n  FR: `${name}! 🙏\n\nUn mois depuis que vous avez commencé avec KoneksAI — êtes-vous satisfait des résultats?\n\nNous adorons entendre nos clients. Pouvez-vous partager votre expérience?\n\n⭐ *Laissez un court témoignage* (1-2 phrases) — répondez directement à ce message!\n\nEn plus: partagez votre code de parrainage avec un ami:\n🎁 *Votre code*: ${refCode}\nVotre ami obtient 20% de réduction, vous obtenez 20% de réduction sur votre prochain mois!\n\nMerci pour votre confiance! 🇭🇹`,\n  EN: `${name}! 🙏\n\nOne month since you started with KoneksAI — are you happy with the results?\n\nWe love hearing from our clients. Can you share your experience?\n\n⭐ *Leave a short testimonial* (1-2 sentences) — reply directly to this message!\n\nAlso: share your referral code with a friend:\n🎁 *Your code*: ${refCode}\nYour friend gets 20% off, you get 20% off your next month!\n\nThank you for your trust! 🇭🇹`\n};\n\nreturn [{ json: { ...client, testimonial_message: messages[lang] || messages.HT } }];"
+      },
+      "id": "node-build-testimonial",
+      "name": "Build Testimonial Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3560, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.testimonial_message) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-testimonial",
+      "name": "WhatsApp: Testimonial Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3800, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clients",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "=active_30d",
+            "notes": "=Testimonial + referral request sent {{ $now.toISO() }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.customer_phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-update-client-30d",
+      "name": "Sheets: Status → Active_30d",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [4040, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerOn": "workflowError"
+      },
+      "id": "node-error-trigger-fulfill",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 640]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for logging\nconst err = $input.first().json;\nreturn [{ json: {\n  workflow: 'fulfillment',\n  error_message: err.message || JSON.stringify(err),\n  error_node: err.node || 'unknown',\n  timestamp: new Date().toISOString()\n} }];"
+      },
+      "id": "node-format-error",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 640]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ErrorLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.timestamp }}",
+            "workflow": "={{ $json.workflow }}",
+            "error_node": "={{ $json.error_node }}",
+            "error_message": "={{ $json.error_message }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-log-error-sheet",
+      "name": "Sheets: Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [680, 640],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $env.FOUNDER_WHATSAPP }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"⚠️ KoneksAI FULFILLMENT ERROR\\n\\nWorkflow: {{ $json.workflow }}\\nNode: {{ $json.error_node }}\\nError: {{ $json.error_message }}\\nTime: {{ $json.timestamp }}\"\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-alert-founder-error",
+      "name": "Alert Founder: Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [920, 640],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Payment Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Validate Payment Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payment Fields": {
+      "main": [
+        [
+          {
+            "node": "Payment Status = success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Status = success?": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Log Payment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Non-Success Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Log Payment": {
+      "main": [
+        [
+          {
+            "node": "Enrich with Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich with Client Data": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Add to Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Add to Clients": {
+      "main": [
+        [
+          {
+            "node": "Build Onboarding Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Onboarding Message": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Onboarding Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Onboarding Message": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Update Lead → Sold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Update Lead → Sold": {
+      "main": [
+        [
+          {
+            "node": "Wait 7 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 7 Days": {
+      "main": [
+        [
+          {
+            "node": "Build 7-Day Check-in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build 7-Day Check-in": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: 7-Day Check-in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: 7-Day Check-in": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Status → Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Status → Active": {
+      "main": [
+        [
+          {
+            "node": "Wait 23 More Days (Day 30)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 23 More Days (Day 30)": {
+      "main": [
+        [
+          {
+            "node": "Build Testimonial Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Testimonial Request": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Testimonial Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Testimonial Request": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Status → Active_30d",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Log Error": {
+      "main": [
+        [
+          {
+            "node": "Alert Founder: Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/Port-au-Prince"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-koneksai-001",
+      "name": "koneksai"
+    },
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-fulfill-001",
+      "name": "fulfillment"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-05-14T00:00:00.000Z",
+  "versionId": "v1.0.0"
+}

@@ -1,0 +1,673 @@
+{
+  "name": "KoneksAI — Daily KPI Analytics Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-kpi",
+      "name": "Schedule: 7AM Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Analytics",
+          "mode": "name"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "node-read-analytics",
+      "name": "Sheets: Read Analytics",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [440, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "node-read-leads",
+      "name": "Sheets: Read Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [440, 260],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Payments",
+          "mode": "name"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "node-read-payments",
+      "name": "Sheets: Read Payments",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [440, 540],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clients",
+          "mode": "name"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "node-read-clients",
+      "name": "Sheets: Read Clients",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [440, 680],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// KoneksAI KPI Calculator\n// Reads all sheet data from previous nodes and\n// computes: CAC, LTV, churn_rate, conversion_rate\n// =============================================\n\n// Get data from all previous nodes\nconst allItems = $input.all();\n\n// Each item comes from a different branch — collect by node name\n// n8n merges parallel branches; we index by order\n// In this merged flow, items arrive as [leads[], analytics[], payments[], clients[]]\n// We reference via $('node-name').all() pattern\n\nconst leadsData = $('Sheets: Read Leads').all().map(i => i.json);\nconst paymentsData = $('Sheets: Read Payments').all().map(i => i.json);\nconst clientsData = $('Sheets: Read Clients').all().map(i => i.json);\nconst analyticsData = $('Sheets: Read Analytics').all().map(i => i.json);\n\n// ---- Date helpers ----\nconst now = new Date();\n// Haiti is UTC-5 (no DST in 2025)\nconst haitiOffset = -5 * 60;\nconst haitiNow = new Date(now.getTime() + haitiOffset * 60 * 1000);\nconst todayStr = haitiNow.toISOString().split('T')[0];\n\nconst startOfToday = new Date(todayStr + 'T00:00:00-05:00');\nconst startOfMonth = new Date(todayStr.slice(0, 8) + '01T00:00:00-05:00');\nconst thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);\n\nconst isToday = (dateStr) => {\n  if (!dateStr) return false;\n  return dateStr.toString().startsWith(todayStr);\n};\n\nconst isThisMonth = (dateStr) => {\n  if (!dateStr) return false;\n  return dateStr.toString().startsWith(todayStr.slice(0, 7));\n};\n\nconst isWithinDays = (dateStr, days) => {\n  if (!dateStr) return false;\n  const d = new Date(dateStr);\n  return d >= new Date(now.getTime() - days * 24 * 60 * 60 * 1000);\n};\n\n// ---- Lead metrics ----\nconst newLeadsToday = leadsData.filter(l => isToday(l.timestamp)).length;\nconst totalLeads = leadsData.length;\nconst soldLeads = leadsData.filter(l => l.stage === 'sold').length;\n\n// ---- Payment / revenue metrics ----\nconst paymentsToday = paymentsData.filter(p => p.status === 'success' && isToday(p.timestamp));\nconst paymentsThisMonth = paymentsData.filter(p => p.status === 'success' && isThisMonth(p.timestamp));\nconst successPaymentsAll = paymentsData.filter(p => p.status === 'success');\n\nconst newClientsToday = paymentsToday.length;\nconst newClientsThisMonth = paymentsThisMonth.length;\n\nconst totalRevenueToday_HTG = paymentsToday.reduce((sum, p) => sum + (parseFloat(p.amount_htg) || 0), 0);\nconst totalRevenueToday_USD = paymentsToday.reduce((sum, p) => sum + (parseFloat(p.amount_usd) || 0), 0);\n\nconst totalRevenueAllTime_USD = successPaymentsAll.reduce((sum, p) => sum + (parseFloat(p.amount_usd) || 0), 0);\n\n// ---- Client metrics ----\nconst activeClients = clientsData.filter(c =>\n  ['active', 'active_30d', 'active_60d', 'onboarding'].includes(c.status)\n);\nconst churnedClients = clientsData.filter(c => c.status === 'churned');\nconst totalClientsAtStartOfMonth = clientsData.filter(c => {\n  // Clients who existed before start of month\n  return c.onboard_date && new Date(c.onboard_date) < startOfMonth;\n}).length;\n\nconst avgMonthlyRevenue_USD = activeClients.length > 0\n  ? activeClients.reduce((sum, c) => sum + ((parseFloat(c.monthly_revenue_htg) || 0) / 154), 0) / activeClients.length\n  : 0;\n\n// ---- KPI Calculations ----\n// CAC = total ad spend today / new clients today\n// Ad spend comes from Meta Ads API; use environment variable or last Analytics row as proxy\nconst lastAnalyticsRow = analyticsData.length > 0 ? analyticsData[analyticsData.length - 1] : {};\nconst adSpendToday_USD = parseFloat(process.env.META_AD_SPEND_TODAY_USD || lastAnalyticsRow.total_ad_spend_usd || 0);\n\nconst cac_usd = newClientsToday > 0\n  ? parseFloat((adSpendToday_USD / newClientsToday).toFixed(2))\n  : null;\n\n// LTV = average monthly revenue * 12\nconst ltv_usd = parseFloat((avgMonthlyRevenue_USD * 12).toFixed(2));\n\n// Churn rate = churned this month / total clients at start of month\nconst churnedThisMonth = churnedClients.filter(c =>\n  c.notes && c.notes.includes(todayStr.slice(0, 7))\n).length;\nconst churn_rate = totalClientsAtStartOfMonth > 0\n  ? parseFloat((churnedThisMonth / totalClientsAtStartOfMonth).toFixed(4))\n  : 0;\n\n// Conversion rate = sold leads / total leads\nconst conversion_rate = totalLeads > 0\n  ? parseFloat((soldLeads / totalLeads).toFixed(4))\n  : 0;\n\n// CAC alert threshold\nconst CAC_THRESHOLD_USD = 20;\nconst alert_cac_exceeded = cac_usd !== null && cac_usd > CAC_THRESHOLD_USD;\n\n// ---- Compose KPI object ----\nconst kpi = {\n  sync_id: `kpi-${todayStr}`,\n  date: todayStr,\n  new_leads: newLeadsToday,\n  new_clients: newClientsToday,\n  new_clients_this_month: newClientsThisMonth,\n  total_revenue_htg: parseFloat(totalRevenueToday_HTG.toFixed(2)),\n  total_revenue_usd: parseFloat(totalRevenueToday_USD.toFixed(2)),\n  total_revenue_all_time_usd: parseFloat(totalRevenueAllTime_USD.toFixed(2)),\n  total_ad_spend_usd: parseFloat(adSpendToday_USD.toFixed(2)),\n  cac_usd: cac_usd,\n  ltv_usd: ltv_usd,\n  churn_rate: churn_rate,\n  conversion_rate: conversion_rate,\n  active_clients_total: activeClients.length,\n  total_leads: totalLeads,\n  alert_cac_exceeded: alert_cac_exceeded,\n  synced_at: now.toISOString()\n};\n\nreturn [{ json: kpi }];"
+      },
+      "id": "node-calculate-kpis",
+      "name": "Calculate KPIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Analytics",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "new_leads": "={{ $json.new_leads }}",
+            "new_clients": "={{ $json.new_clients }}",
+            "total_revenue_usd": "={{ $json.total_revenue_usd }}",
+            "cac_usd": "={{ $json.cac_usd !== null ? $json.cac_usd : 'N/A (no sales)' }}",
+            "ltv_usd": "={{ $json.ltv_usd }}",
+            "churn_rate": "={{ $json.churn_rate }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-write-analytics",
+      "name": "Sheets: Write Daily KPI Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1040, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.alert_cac_exceeded }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "alert"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-cac-alert-check",
+      "name": "CAC > $20?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1280, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format CAC alert WhatsApp message for founder\nconst kpi = $input.first().json;\n\nconst msg = `🚨 *KoneksAI KPI ALERT*\n\n⚠️ CAC depase $20 jodi a!\n\n📊 *Chif jodi a (${kpi.date}):*\n• CAC: $${kpi.cac_usd} USD ⬆️ TWÒP\n• Nouvo kliyan: ${kpi.new_clients}\n• Depans Meta Ads: $${kpi.total_ad_spend_usd}\n• Nouvo leads: ${kpi.new_leads}\n• Konvèsyon: ${(kpi.conversion_rate * 100).toFixed(1)}%\n\n🎯 *Aksyon rekòmande:*\n1. Tcheke pèfòmans kanpay Meta la\n2. Rann tèt ou sèten kreyatif an travay\n3. Konsidere redui bidji jouk konvèsyon monte\n\nLTV aktyèl: $${kpi.ltv_usd}/ane`;\n\nreturn [{ json: { ...kpi, alert_message: msg } }];"
+      },
+      "id": "node-format-cac-alert",
+      "name": "Format CAC Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $env.FOUNDER_WHATSAPP }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.alert_message) }}\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-wa-cac-alert",
+      "name": "WhatsApp: CAC Alert to Founder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1760, 280],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate HTML daily summary email\nconst kpi = $input.first().json;\n\nconst cacDisplay = kpi.cac_usd !== null ? `$${kpi.cac_usd}` : 'N/A (0 vant jodi a)';\nconst cacColor = kpi.alert_cac_exceeded ? '#e74c3c' : '#27ae60';\nconst churnPct = (kpi.churn_rate * 100).toFixed(1);\nconst convPct = (kpi.conversion_rate * 100).toFixed(1);\n\nconst html = `\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>KoneksAI — Rapò Jounalye ${kpi.date}</title>\n<style>\n  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }\n  .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }\n  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 30px; text-align: center; }\n  .header h1 { margin: 0; font-size: 24px; }\n  .header p { margin: 8px 0 0; opacity: 0.8; font-size: 14px; }\n  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 24px; }\n  .kpi-card { background: #f8f9fa; border-radius: 8px; padding: 16px; text-align: center; border-left: 4px solid #3498db; }\n  .kpi-card.alert { border-left-color: #e74c3c; background: #fff5f5; }\n  .kpi-card.good { border-left-color: #27ae60; background: #f0fff4; }\n  .kpi-value { font-size: 28px; font-weight: bold; color: #1a1a2e; }\n  .kpi-label { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }\n  .section { padding: 0 24px 24px; }\n  .section h2 { color: #1a1a2e; border-bottom: 2px solid #3498db; padding-bottom: 8px; }\n  .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }\n  .metric-row:last-child { border-bottom: none; }\n  .metric-name { color: #555; }\n  .metric-value { font-weight: bold; color: #1a1a2e; }\n  .alert-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 0 24px 24px; }\n  .footer { background: #f8f9fa; padding: 16px 24px; text-align: center; color: #888; font-size: 12px; }\n</style>\n</head>\n<body>\n<div class=\"container\">\n  <div class=\"header\">\n    <h1>🇭🇹 KoneksAI</h1>\n    <p>Rapò Jounalye — ${kpi.date}</p>\n    <p style=\"font-size:12px; opacity:0.6;\">Jenere chak maten a 7h (Hay)</p>\n  </div>\n\n  ${kpi.alert_cac_exceeded ? `\n  <div class=\"alert-banner\">\n    ⚠️ <strong>ALÈT CAC:</strong> Koute akizisyon kliyan an ($${kpi.cac_usd}) depase limit $20 USD.\n    Tcheke pèfòmans kanpay Meta Ads ou yo imedyatman.\n  </div>` : ''}\n\n  <div class=\"kpi-grid\">\n    <div class=\"kpi-card\">\n      <div class=\"kpi-value\">${kpi.new_leads}</div>\n      <div class=\"kpi-label\">Nouvo Leads Jodi</div>\n    </div>\n    <div class=\"kpi-card ${kpi.new_clients > 0 ? 'good' : ''}\">\n      <div class=\"kpi-value\">${kpi.new_clients}</div>\n      <div class=\"kpi-label\">Nouvo Kliyan Jodi</div>\n    </div>\n    <div class=\"kpi-card ${kpi.alert_cac_exceeded ? 'alert' : 'good'}\">\n      <div class=\"kpi-value\" style=\"color:${cacColor}\">${cacDisplay}</div>\n      <div class=\"kpi-label\">CAC (Koute Akizisyon)</div>\n    </div>\n    <div class=\"kpi-card good\">\n      <div class=\"kpi-value\">$${kpi.ltv_usd}</div>\n      <div class=\"kpi-label\">LTV Estimasyon</div>\n    </div>\n  </div>\n\n  <div class=\"section\">\n    <h2>📊 Detay Metrik</h2>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">Revni Jodi a</span>\n      <span class=\"metric-value\">$${kpi.total_revenue_usd} USD (${kpi.total_revenue_htg.toLocaleString()} HTG)</span>\n    </div>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">Depans Meta Ads Jodi a</span>\n      <span class=\"metric-value\">$${kpi.total_ad_spend_usd} USD</span>\n    </div>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">To Konvèsyon</span>\n      <span class=\"metric-value\">${convPct}%</span>\n    </div>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">To Churn Mwa Sa a</span>\n      <span class=\"metric-value\">${churnPct}%</span>\n    </div>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">Total Kliyan Aktif</span>\n      <span class=\"metric-value\">${kpi.active_clients_total}</span>\n    </div>\n    <div class=\"metric-row\">\n      <span class=\"metric-name\">Total Revni Tout Tan</span>\n      <span class=\"metric-value\">$${kpi.total_revenue_all_time_usd.toLocaleString()} USD</span>\n    </div>\n  </div>\n\n  <div class=\"footer\">\n    KoneksAI — Port-au-Prince, Haiti 🇭🇹<br>\n    Rapò sa a jeneratik otomat a 7h chak jou.\n  </div>\n</div>\n</body>\n</html>`;\n\nconst subject = `KoneksAI ${kpi.date}: ${kpi.new_clients} kliyan, CAC ${ kpi.cac_usd !== null ? '$' + kpi.cac_usd : 'N/A' }${kpi.alert_cac_exceeded ? ' ⚠️ ALÈT' : ' ✅'}`;\n\nreturn [{ json: { ...kpi, email_html: html, email_subject: subject } }];"
+      },
+      "id": "node-generate-email",
+      "name": "Generate Daily Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 520]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.FOUNDER_EMAIL }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "html",
+        "html": "={{ $json.email_html }}",
+        "options": {
+          "ccList": "",
+          "replyTo": "noreply@koneksai.ht",
+          "appendAttribution": false
+        }
+      },
+      "id": "node-send-gmail",
+      "name": "Gmail: Send Daily Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1760, 520],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-cred-001",
+          "name": "KoneksAI Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flag underperforming campaigns by checking CAC against threshold\n// This runs after email send regardless of CAC alert status\nconst kpi = $input.first().json;\n\nconst CAC_THRESHOLD = 20;\nconst flagged = [];\n\n// In production this would call Meta Ads Insights API\n// For now we flag the overall account if CAC > threshold\nif (kpi.cac_usd !== null && kpi.cac_usd > CAC_THRESHOLD) {\n  flagged.push({\n    date: kpi.date,\n    campaign_id: 'ACCOUNT_LEVEL',\n    cac_usd: kpi.cac_usd,\n    threshold_usd: CAC_THRESHOLD,\n    new_clients: kpi.new_clients,\n    ad_spend_usd: kpi.total_ad_spend_usd,\n    action_required: 'Review targeting, creative, and landing page conversion rate',\n    flagged_at: new Date().toISOString()\n  });\n}\n\nreturn flagged.length > 0\n  ? flagged.map(f => ({ json: f }))\n  : [{ json: { message: 'No campaigns flagged. CAC is within threshold.', date: kpi.date, cac_usd: kpi.cac_usd } }];"
+      },
+      "id": "node-flag-campaigns",
+      "name": "Flag Underperforming Campaigns",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 520]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.campaign_id }}",
+                    "rightValue": "No campaigns flagged",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.campaign_id !== undefined }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "has_flags"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-has-flags",
+      "name": "Has Flags?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [2240, 520]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Alerts",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "campaign_id": "={{ $json.campaign_id }}",
+            "cac_usd": "={{ $json.cac_usd }}",
+            "threshold_usd": "={{ $json.threshold_usd }}",
+            "new_clients": "={{ $json.new_clients }}",
+            "ad_spend_usd": "={{ $json.ad_spend_usd }}",
+            "action_required": "={{ $json.action_required }}",
+            "flagged_at": "={{ $json.flagged_at }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-write-alerts",
+      "name": "Sheets: Write Campaign Alerts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2480, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerOn": "workflowError"
+      },
+      "id": "node-kpi-error-trigger",
+      "name": "KPI Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const err = $input.first().json;\nconst msg = `⚠️ KoneksAI KPI SYNC ERROR\\n\\nWokflò: kpi-analytics\\nMessaj: ${err.message || JSON.stringify(err)}\\nTan: ${new Date().toISOString()}`;\nreturn [{ json: { alert_message: msg } }];"
+      },
+      "id": "node-kpi-error-format",
+      "name": "Format KPI Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $env.FOUNDER_WHATSAPP }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.alert_message) }}\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-kpi-error-alert",
+      "name": "Alert Founder: KPI Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 700],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: 7AM Daily": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Read Leads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets: Read Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets: Read Payments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets: Read Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Read Leads": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Read Analytics": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Read Payments": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Read Clients": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate KPIs": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Write Daily KPI Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Write Daily KPI Row": {
+      "main": [
+        [
+          {
+            "node": "CAC > $20?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CAC > $20?": {
+      "main": [
+        [
+          {
+            "node": "Format CAC Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Daily Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CAC Alert": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: CAC Alert to Founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: CAC Alert to Founder": {
+      "main": [
+        [
+          {
+            "node": "Generate Daily Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Daily Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Send Daily Report": {
+      "main": [
+        [
+          {
+            "node": "Flag Underperforming Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flag Underperforming Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Has Flags?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Flags?": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Write Campaign Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "KPI Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format KPI Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format KPI Error": {
+      "main": [
+        [
+          {
+            "node": "Alert Founder: KPI Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/Port-au-Prince"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-koneksai-001",
+      "name": "koneksai"
+    },
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-analytics-001",
+      "name": "analytics"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-05-14T00:00:00.000Z",
+  "versionId": "v1.0.0"
+}

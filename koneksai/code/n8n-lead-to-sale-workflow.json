@@ -1,0 +1,1178 @@
+{
+  "name": "KoneksAI — Lead Capture to Sale",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "haiti-lead-capture",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "node-webhook-lead",
+      "name": "Webhook: Lead Capture",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 400],
+      "webhookId": "koneksai-lead-capture-001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"received\", \"lead_id\": $json[\"lead_id\"] }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [440, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize and validate incoming lead data\nconst body = $input.first().json;\nconst now = new Date().toISOString();\n\n// Generate lead_id if not provided\nconst lead_id = body.lead_id || `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\n// Normalize phone to E.164: Haiti +509\nlet phone = (body.phone || '').replace(/\\s+/g, '').replace(/-/g, '');\nif (phone.startsWith('509') && !phone.startsWith('+')) {\n  phone = '+' + phone;\n} else if (!phone.startsWith('+')) {\n  phone = '+509' + phone;\n}\n\n// Detect language: default to HT for Haiti\nconst langRaw = (body.lang || '').toUpperCase();\nconst lang = ['FR', 'HT', 'EN'].includes(langRaw) ? langRaw : 'HT';\n\n// Normalize source\nconst validSources = ['facebook_ad', 'instagram_ad', 'whatsapp_dm', 'google_form', 'referral', 'organic_whatsapp', 'website'];\nconst source = validSources.includes(body.source) ? body.source : 'organic_whatsapp';\n\n// Normalize segment\nconst validSegments = ['restaurant', 'pharmacy', 'boutique', 'salon', 'other'];\nconst segment = validSegments.includes(body.segment) ? body.segment : 'other';\n\n// Clean name\nconst name = (body.name || 'Moun sa a').trim().substring(0, 120);\n\nreturn [{\n  json: {\n    lead_id,\n    name,\n    phone,\n    lang,\n    source,\n    segment,\n    timestamp: body.timestamp || now,\n    normalized_at: now,\n    ad_campaign_id: body.ad_campaign_id || null,\n    ad_set_id: body.ad_set_id || null,\n    ad_id: body.ad_id || null,\n    message_text: (body.message_text || '').substring(0, 1000),\n    stage: 'new'\n  }\n}];"
+      },
+      "id": "node-normalize-data",
+      "name": "Normalize Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "name": "={{ $json.name }}",
+            "phone": "={{ $json.phone }}",
+            "lang": "={{ $json.lang }}",
+            "source": "={{ $json.source }}",
+            "segment": "={{ $json.segment }}",
+            "stage": "=new",
+            "ad_campaign_id": "={{ $json.ad_campaign_id }}",
+            "last_contact_date": "={{ $now.toISO() }}",
+            "notes": "={{ $json.message_text }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "RAW"
+        }
+      },
+      "id": "node-sheets-append-lead",
+      "name": "Sheets: Append Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [680, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.lang }}",
+                    "rightValue": "HT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.lang }}",
+                    "rightValue": "FR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FR"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.lang }}",
+                    "rightValue": "EN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EN"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-branch-lang",
+      "name": "Branch by Language",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [920, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build WhatsApp message for Haitian Creole\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0]; // first name only\nconst segment = lead.segment;\n\nconst segmentMap = {\n  restaurant: 'restoran ou an',\n  pharmacy: 'famasi ou a',\n  boutique: 'boutik ou a',\n  salon: 'salon ou an',\n  other: 'biznis ou an'\n};\nconst bizLabel = segmentMap[segment] || 'biznis ou an';\n\nconst messageText = `Bonjou ${name}! 👋\n\nMèsi pou kontakte KoneksAI. Nou espesyalize nan ede biznis tankou ${bizLabel} jwenn plis kliyan ak WhatsApp otomatik.\n\n✅ Repons nan mwens pase 1 minit\n✅ Mesaj otomatik 24/7\n✅ Peman fasil ak MonCash\n\nEske ou ka ban mwen 2 minit pou m eksplike ou kijan sa travay?`;\n\nreturn [{ json: { ...lead, reply_text: messageText, lang_used: 'HT' } }];"
+      },
+      "id": "node-msg-ht",
+      "name": "Build Message (HT)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build WhatsApp message for French\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0];\nconst segment = lead.segment;\n\nconst segmentMap = {\n  restaurant: 'votre restaurant',\n  pharmacy: 'votre pharmacie',\n  boutique: 'votre boutique',\n  salon: 'votre salon',\n  other: 'votre entreprise'\n};\nconst bizLabel = segmentMap[segment] || 'votre entreprise';\n\nconst messageText = `Bonjour ${name}! 👋\n\nMerci de contacter KoneksAI. Nous aidons des entreprises comme ${bizLabel} à attirer plus de clients grâce à l'automatisation WhatsApp.\n\n✅ Réponse en moins d'1 minute\n✅ Messages automatiques 24h/24\n✅ Paiement facile via MonCash\n\nPouvez-vous m'accorder 2 minutes pour vous expliquer comment ça fonctionne?`;\n\nreturn [{ json: { ...lead, reply_text: messageText, lang_used: 'FR' } }];"
+      },
+      "id": "node-msg-fr",
+      "name": "Build Message (FR)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build WhatsApp message for English\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0];\nconst segment = lead.segment;\n\nconst segmentMap = {\n  restaurant: 'your restaurant',\n  pharmacy: 'your pharmacy',\n  boutique: 'your boutique',\n  salon: 'your salon',\n  other: 'your business'\n};\nconst bizLabel = segmentMap[segment] || 'your business';\n\nconst messageText = `Hello ${name}! 👋\n\nThanks for reaching out to KoneksAI. We help businesses like ${bizLabel} get more customers through WhatsApp automation.\n\n✅ Response in under 1 minute\n✅ Automated messages 24/7\n✅ Easy payment via MonCash\n\nCan you spare 2 minutes for me to show you how it works?`;\n\nreturn [{ json: { ...lead, reply_text: messageText, lang_used: 'EN' } }];"
+      },
+      "id": "node-msg-en",
+      "name": "Build Message (EN)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.reply_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 3
+            }
+          }
+        }
+      },
+      "id": "node-wa-initial-reply-ht",
+      "name": "WhatsApp: Initial Reply (HT)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1400, 280],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.reply_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-initial-reply-fr",
+      "name": "WhatsApp: Initial Reply (FR)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1400, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.reply_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-initial-reply-en",
+      "name": "WhatsApp: Initial Reply (EN)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1400, 520],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 24
+      },
+      "id": "node-wait-24h",
+      "name": "Wait 24 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1640, 400],
+      "webhookId": "koneksai-wait-24h-001"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone",
+              "condition": "eq",
+              "keyValue": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "node-check-lead-status",
+      "name": "Check Lead Stage",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1880, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "sold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sold"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "qualified"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-check-already-converted",
+      "name": "Already Converted?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [2120, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Day 1 follow-up offer message\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0];\nconst lang = lead.lang || 'HT';\nconst segment = lead.segment || 'other';\n\nconst segmentBenefits = {\n  restaurant: {\n    HT: 'Restoran ki itilize WhatsApp otomatik yo jwenn 40% plis komand yo!',\n    FR: 'Les restaurants utilisant WhatsApp automatique reçoivent 40% de commandes en plus!',\n    EN: 'Restaurants using WhatsApp automation get 40% more orders!'\n  },\n  pharmacy: {\n    HT: 'Famasi yo ka konfime preskripsyon ak livrezon otomat.',\n    FR: 'Les pharmacies peuvent confirmer prescriptions et livraisons automatiquement.',\n    EN: 'Pharmacies can auto-confirm prescriptions and deliveries.'\n  },\n  boutique: {\n    HT: 'Boutik yo k ap itilize WhatsApp doub vant yo nan 3 mwa.',\n    FR: 'Les boutiques utilisant WhatsApp doublent leurs ventes en 3 mois.',\n    EN: 'Boutiques using WhatsApp double their sales in 3 months.'\n  },\n  salon: {\n    HT: 'Salon yo elimine 90% randez-vou rate yo ak konfirmasyon otomat.',\n    FR: 'Les salons éliminent 90% des rendez-vous manqués avec la confirmation automatique.',\n    EN: 'Salons eliminate 90% of missed appointments with auto-confirmation.'\n  },\n  other: {\n    HT: 'Biznis ki itilize WhatsApp otomatik triple repons kliyan yo.',\n    FR: 'Les entreprises utilisant WhatsApp automatique triplent leurs réponses clients.',\n    EN: 'Businesses using WhatsApp automation triple their customer responses.'\n  }\n};\n\nconst benefit = (segmentBenefits[segment] || segmentBenefits.other)[lang];\n\nconst messages = {\n  HT: `${name}, tande sa... 🔥\n\n${benefit}\n\nKoneksAI ka mete sa travay pou biznis ou an nan 48 è.\n\n📱 Pakè Estàtè a: sèlman 5,000 HTG/mwa\n📈 Pakè Kwasans: 10,000 HTG/mwa\n⭐ Pakè Pro: 20,000 HTG/mwa\n\nTou nou aksepte MonCash. Ki pakè ki enterese ou?`,\n  FR: `${name}, écoutez ça... 🔥\n\n${benefit}\n\nKoneksAI peut mettre cela en place pour votre entreprise en 48h.\n\n📱 Pack Starter: seulement 5,000 HTG/mois\n📈 Pack Croissance: 10,000 HTG/mois\n⭐ Pack Pro: 20,000 HTG/mois\n\nNous acceptons MonCash. Quel pack vous intéresse?`,\n  EN: `${name}, hear this... 🔥\n\n${benefit}\n\nKoneksAI can set this up for your business in 48 hours.\n\n📱 Starter Pack: only 5,000 HTG/month\n📈 Growth Pack: 10,000 HTG/month\n⭐ Pro Pack: 20,000 HTG/month\n\nWe accept MonCash. Which package interests you?`\n};\n\nreturn [{ json: { ...lead, followup_text: messages[lang] || messages.HT, followup_day: 1 } }];"
+      },
+      "id": "node-build-followup-day1",
+      "name": "Build Day 1 Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2360, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.followup_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-followup-day1",
+      "name": "WhatsApp: Day 1 Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2600, 520],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 48
+      },
+      "id": "node-wait-48h",
+      "name": "Wait 48 Hours (Day 3)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2840, 520],
+      "webhookId": "koneksai-wait-48h-001"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone",
+              "condition": "eq",
+              "keyValue": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "node-check-stage-day3",
+      "name": "Check Stage (Day 3)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3080, 520],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "sold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "done"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-check-sold-day3",
+      "name": "Still Active? (Day 3)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [3320, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Day 3 objection-handling follow-up\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0];\nconst lang = lead.lang || 'HT';\n\nconst messages = {\n  HT: `${name}, mwen konprann ou okipe. 😊\n\nMen 3 rezon poukisa biznis tankou paw chwazi KoneksAI:\n\n1️⃣ Ou pa bezwen okenn konesans teknik\n2️⃣ Nou monte tout bagay pou ou nan 48è\n3️⃣ Si ou pa satisfè nan 30 jou, nou remèt ou lajan ou\n\nTou nou fè demo gratis 15 minit. Eske ou disponib jodi a oswa demen?`,\n  FR: `${name}, je comprends que vous êtes occupé. 😊\n\nVoici 3 raisons pour lesquelles des entreprises comme la vôtre choisissent KoneksAI:\n\n1️⃣ Aucune connaissance technique requise\n2️⃣ Nous configurons tout en 48h\n3️⃣ Remboursement garanti sous 30 jours\n\nNous offrons aussi une démo gratuite de 15 minutes. Êtes-vous disponible aujourd'hui ou demain?`,\n  EN: `${name}, I understand you're busy. 😊\n\nHere are 3 reasons businesses like yours choose KoneksAI:\n\n1️⃣ No technical knowledge required\n2️⃣ We set everything up in 48 hours\n3️⃣ 30-day money-back guarantee\n\nWe also offer a free 15-minute demo. Are you available today or tomorrow?`\n};\n\nreturn [{ json: { ...lead, followup_text: messages[lang] || messages.HT, followup_day: 3 } }];"
+      },
+      "id": "node-build-followup-day3",
+      "name": "Build Day 3 Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3560, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.followup_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-followup-day3",
+      "name": "WhatsApp: Day 3 Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3800, 640],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 96
+      },
+      "id": "node-wait-96h",
+      "name": "Wait 96 Hours (Day 7)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [4040, 640],
+      "webhookId": "koneksai-wait-96h-001"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone",
+              "condition": "eq",
+              "keyValue": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "node-check-stage-day7",
+      "name": "Check Stage (Day 7)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [4280, 640],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "sold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "done"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-check-sold-day7",
+      "name": "Still Active? (Day 7)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [4520, 640]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Day 7 final soft-close message\nconst lead = $input.first().json;\nconst name = lead.name.split(' ')[0];\nconst lang = lead.lang || 'HT';\n\nconst messages = {\n  HT: `${name}, dènye mesaj mwen an. 🙏\n\nMwen pa vle pèdi tan ou, men mwen vle asire ou ke ofr espesyal nou an ekspire nan 48è:\n\n🎁 50% rabè sou premye mwa ou\n💳 Peman MonCash fasil\n🔒 Garanti 30 jou\n\nSi ou pa prè pou kounye a, pa gen pwoblèm — mwen ka kontakte ou nan yon peryòd ki pi bon pou ou.\n\nResponde \"WI\" pou profite ofr la oswa \"PA KOUNJE\" pou mwen kontakte ou pita.`,\n  FR: `${name}, mon dernier message. 🙏\n\nJe ne veux pas vous déranger, mais je veux m'assurer que vous savez que notre offre spéciale expire dans 48h:\n\n🎁 50% de réduction sur votre premier mois\n💳 Paiement facile via MonCash\n🔒 Garantie 30 jours\n\nSi vous n'êtes pas prêt maintenant, pas de problème — je peux vous recontacter à un meilleur moment.\n\nRépondez \"OUI\" pour profiter de l'offre ou \"PAS MAINTENANT\" pour que je vous recontacte plus tard.`,\n  EN: `${name}, my last message. 🙏\n\nI don't want to waste your time, but I want to make sure you know our special offer expires in 48 hours:\n\n🎁 50% off your first month\n💳 Easy MonCash payment\n🔒 30-day guarantee\n\nIf you're not ready now, no problem — I can reach out at a better time.\n\nReply \"YES\" to take the offer or \"NOT NOW\" for me to follow up later.`\n};\n\nreturn [{ json: { ...lead, followup_text: messages[lang] || messages.HT, followup_day: 7 } }];"
+      },
+      "id": "node-build-followup-day7",
+      "name": "Build Day 7 Close",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4760, 760]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.followup_text) }}\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "node-wa-followup-day7",
+      "name": "WhatsApp: Day 7 Close",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [5000, 760],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wa-header-auth-001",
+          "name": "WhatsApp Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "=cold",
+            "last_contact_date": "={{ $now.toISO() }}",
+            "notes": "=Sequence completed Day 7 — no response"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-update-cold",
+      "name": "Update Stage: Cold",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [5240, 760],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "=contacted",
+            "last_contact_date": "={{ $now.toISO() }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-update-contacted",
+      "name": "Update Stage: Contacted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1640, 520],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred-001",
+          "name": "KoneksAI Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/koneksai-error-log",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow\": \"lead-to-sale\",\n  \"error\": {{ JSON.stringify($json) }},\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-error-handler",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1400, 660]
+    },
+    {
+      "parameters": {
+        "triggerOn": "workflowError"
+      },
+      "id": "node-error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [1160, 660]
+    }
+  ],
+  "connections": {
+    "Webhook: Lead Capture": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Normalize Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Append Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Append Lead": {
+      "main": [
+        [
+          {
+            "node": "Branch by Language",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch by Language": {
+      "main": [
+        [
+          {
+            "node": "Build Message (HT)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Message (FR)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Message (EN)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Message (HT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Message (HT)": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Initial Reply (HT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Message (FR)": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Initial Reply (FR)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Message (EN)": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Initial Reply (EN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Initial Reply (HT)": {
+      "main": [
+        [
+          {
+            "node": "Update Stage: Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Initial Reply (FR)": {
+      "main": [
+        [
+          {
+            "node": "Update Stage: Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Initial Reply (EN)": {
+      "main": [
+        [
+          {
+            "node": "Update Stage: Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Stage: Contacted": {
+      "main": [
+        [
+          {
+            "node": "Wait 24 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24 Hours": {
+      "main": [
+        [
+          {
+            "node": "Check Lead Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Lead Stage": {
+      "main": [
+        [
+          {
+            "node": "Already Converted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Converted?": {
+      "main": [
+        [],
+        [],
+        [
+          {
+            "node": "Build Day 1 Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Day 1 Follow-up": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Day 1 Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Day 1 Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Wait 48 Hours (Day 3)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 48 Hours (Day 3)": {
+      "main": [
+        [
+          {
+            "node": "Check Stage (Day 3)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Stage (Day 3)": {
+      "main": [
+        [
+          {
+            "node": "Still Active? (Day 3)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still Active? (Day 3)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Day 3 Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Day 3 Follow-up": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Day 3 Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Day 3 Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Wait 96 Hours (Day 7)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 96 Hours (Day 7)": {
+      "main": [
+        [
+          {
+            "node": "Check Stage (Day 7)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Stage (Day 7)": {
+      "main": [
+        [
+          {
+            "node": "Still Active? (Day 7)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still Active? (Day 7)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Day 7 Close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Day 7 Close": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Day 7 Close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Day 7 Close": {
+      "main": [
+        [
+          {
+            "node": "Update Stage: Cold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/Port-au-Prince"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-koneksai-001",
+      "name": "koneksai"
+    },
+    {
+      "createdAt": "2025-05-14T00:00:00.000Z",
+      "updatedAt": "2025-05-14T00:00:00.000Z",
+      "id": "tag-lead-001",
+      "name": "lead-nurture"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-05-14T00:00:00.000Z",
+  "versionId": "v1.0.0"
+}
