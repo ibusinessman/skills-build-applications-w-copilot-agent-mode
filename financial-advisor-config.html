@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Back-Office | Courtiers & Conseillers Financiers</title>
+  <style>
+    :root {
+      --navy:    #0a1628;
+      --indigo:  #1a2f5e;
+      --blue:    #1e40af;
+      --sky:     #3b82f6;
+      --cyan:    #06b6d4;
+      --gold:    #f59e0b;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --gray50:  #f8fafc;
+      --gray100: #f1f5f9;
+      --gray200: #e2e8f0;
+      --gray400: #94a3b8;
+      --gray600: #475569;
+      --gray800: #1e293b;
+      --white:   #ffffff;
+      --radius:  12px;
+      --shadow:  0 4px 24px rgba(0,0,0,.12);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--gray50);
+      color: var(--gray800);
+      line-height: 1.6;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--navy);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+    .nav-brand { color: var(--white); font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: .5rem; }
+    .nav-brand span { color: var(--cyan); }
+    .lang-tabs { display: flex; gap: .25rem; }
+    .lang-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.2);
+      color: var(--gray400);
+      padding: .3rem .75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .8rem;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .lang-btn.active { background: var(--sky); border-color: var(--sky); color: #fff; }
+    .lang-btn:hover:not(.active) { border-color: var(--sky); color: var(--white); }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--indigo) 60%, #1e3a8a 100%);
+      color: var(--white);
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(6,182,212,.15) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(6,182,212,.2);
+      border: 1px solid rgba(6,182,212,.4);
+      color: var(--cyan);
+      padding: .35rem 1rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; margin-bottom: 1.25rem; }
+    .hero h1 em { color: var(--cyan); font-style: normal; }
+    .hero p { font-size: 1.15rem; color: rgba(255,255,255,.75); max-width: 640px; margin: 0 auto 2.5rem; }
+    .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--sky);
+      color: #fff;
+      padding: .85rem 2rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: #fff;
+      padding: .85rem 2rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      border: 1px solid rgba(255,255,255,.35);
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .2s;
+    }
+    .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── SECTION WRAPPER ── */
+    section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sky); margin-bottom: .5rem; }
+    .section-title { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: .75rem; }
+    .section-sub { color: var(--gray600); max-width: 600px; margin-bottom: 2.5rem; }
+    hr.divider { border: none; border-top: 1px solid var(--gray200); margin: 0; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray200);
+    }
+    .stats-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      gap: 2rem;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-val { font-size: 1.8rem; font-weight: 800; color: var(--blue); }
+    .stat-lbl { font-size: .75rem; color: var(--gray600); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── CARDS GRID ── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,.14); }
+    .card-icon { font-size: 2rem; margin-bottom: .75rem; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .card p { font-size: .88rem; color: var(--gray600); }
+
+    /* ── FLOW DIAGRAM ── */
+    .flow-wrap {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+    .flow-title { font-weight: 700; font-size: .95rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem; }
+    .flow-row { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      min-width: 90px;
+      flex: 1;
+    }
+    .flow-node {
+      width: 54px; height: 54px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: .5rem;
+      flex-shrink: 0;
+    }
+    .flow-node.stripe  { background: #635bff22; }
+    .flow-node.n8n     { background: #ea4b7122; }
+    .flow-node.sheet   { background: #34a85322; }
+    .flow-node.drive   { background: #4285f422; }
+    .flow-node.claude  { background: #f59e0b22; }
+    .flow-node.gmail   { background: #ea433522; }
+    .flow-node.slack   { background: #4a154b22; }
+    .flow-node.whatsapp{ background: #25d36622; }
+    .flow-step-lbl { font-size: .7rem; font-weight: 600; color: var(--gray600); line-height: 1.3; }
+    .flow-arrow { display: flex; align-items: center; padding: 0 .25rem; font-size: 1.25rem; color: var(--gray400); margin-top: -1.5rem; flex-shrink: 0; }
+
+    /* ── PRICING ── */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .pricing-card {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--sky);
+      box-shadow: 0 0 0 2px var(--sky), var(--shadow);
+    }
+    .badge-featured {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--sky); color: #fff;
+      padding: .2rem .8rem; border-radius: 999px;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    }
+    .price-amt { font-size: 2.4rem; font-weight: 800; color: var(--navy); }
+    .price-amt small { font-size: 1rem; font-weight: 400; color: var(--gray600); }
+    .price-label { font-size: .85rem; color: var(--gray600); margin-bottom: 1.25rem; }
+    .price-features { list-style: none; margin-bottom: 1.5rem; }
+    .price-features li { font-size: .88rem; padding: .35rem 0; border-bottom: 1px solid var(--gray100); display: flex; align-items: center; gap: .5rem; }
+    .price-features li::before { content: '✓'; color: var(--green); font-weight: 700; }
+    .price-upsell { font-size: .78rem; color: var(--gold); font-weight: 600; margin-top: .75rem; }
+
+    /* ── STACK ── */
+    .stack-grid { display: flex; flex-wrap: wrap; gap: .75rem; }
+    .stack-chip {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: 8px;
+      padding: .5rem 1rem;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--gray800);
+      display: flex; align-items: center; gap: .4rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .stack-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-ai     { background: #f59e0b; }
+    .dot-auto   { background: #ea4b71; }
+    .dot-data   { background: #34a853; }
+    .dot-comm   { background: #25d366; }
+    .dot-bill   { background: #635bff; }
+    .dot-sched  { background: #06b6d4; }
+
+    /* ── REGIONS ── */
+    .regions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+    .region-card {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--radius);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .region-flag { font-size: 2rem; margin-bottom: .4rem; }
+    .region-name { font-size: .82rem; font-weight: 700; }
+    .region-sub  { font-size: .72rem; color: var(--gray600); }
+
+    /* ── BUDGET ── */
+    .budget-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .budget-table th { background: var(--navy); color: #fff; padding: .75rem 1rem; text-align: left; font-size: .82rem; letter-spacing: .05em; text-transform: uppercase; }
+    .budget-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--gray100); font-size: .88rem; }
+    .budget-table tr:last-child td { border-bottom: none; font-weight: 700; background: var(--gray50); }
+    .budget-table .cost { text-align: right; font-weight: 600; color: var(--blue); }
+
+    /* ── ROADMAP ── */
+    .roadmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+    .rm-phase {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      border-top: 3px solid transparent;
+    }
+    .rm-phase.p1 { border-top-color: var(--sky); }
+    .rm-phase.p2 { border-top-color: var(--green); }
+    .rm-phase.p3 { border-top-color: var(--gold); }
+    .rm-phase.p4 { border-top-color: #8b5cf6; }
+    .rm-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--gray400); margin-bottom: .3rem; }
+    .rm-title { font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
+    .rm-items { list-style: none; }
+    .rm-items li { font-size: .8rem; color: var(--gray600); padding: .2rem 0; display: flex; align-items: flex-start; gap: .4rem; }
+    .rm-items li::before { content: '→'; color: var(--sky); flex-shrink: 0; font-weight: 700; }
+
+    /* ── LANGUAGE SECTIONS ── */
+    .lang-section { display: none; }
+    .lang-section.active { display: block; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.6);
+      text-align: center;
+      padding: 2rem;
+      font-size: .82rem;
+    }
+    footer strong { color: var(--cyan); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .flow-row { gap: .25rem; }
+      .flow-arrow { display: none; }
+      .hero { padding: 3rem 1rem 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">⚡ AI <span>BackOffice</span></div>
+  <div class="lang-tabs">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('fr')">FR</button>
+    <button class="lang-btn" onclick="setLang('ht')">HT</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     ENGLISH
+══════════════════════════════════════════════ -->
+<div id="lang-en" class="lang-section active">
+
+  <div class="hero">
+    <div class="hero-badge">🌍 Global French-Speaking Markets · Port-au-Prince HQ</div>
+    <h1>The <em>AI Back-Office</em><br>Built for Insurance Brokers<br>&amp; Financial Advisors</h1>
+    <p>From lead capture to policy renewal — fully automated, done-for-you, deployed in days. Powered by Claude AI, Google Workspace, n8n, and Stripe.</p>
+    <div class="hero-cta">
+      <a href="#pricing-en" class="btn-primary">See Pricing →</a>
+      <a href="#flows-en" class="btn-outline">View Automation Flows</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat"><div class="stat-val">$249</div><div class="stat-lbl">/ month retainer</div></div>
+      <div class="stat"><div class="stat-val">$800</div><div class="stat-lbl">setup fee</div></div>
+      <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">core automation flows</div></div>
+      <div class="stat"><div class="stat-val">3</div><div class="stat-lbl">languages supported</div></div>
+      <div class="stat"><div class="stat-val">$1K</div><div class="stat-lbl">seed capital</div></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-label">What's Included</div>
+    <h2 class="section-title">Everything a small advisory shop needs</h2>
+    <p class="section-sub">No big dev team. No custom code you can't maintain. One operator + powerful automations.</p>
+    <div class="cards">
+      <div class="card"><div class="card-icon">🗂️</div><h3>Workflow Mapping & Design</h3><p>Your lead-to-renewal process mapped, documented, and automated end-to-end.</p></div>
+      <div class="card"><div class="card-icon">📋</div><h3>Intake + KYC-Ready Forms</h3><p>Smart intake forms capturing client data, risk profiles, and document requests.</p></div>
+      <div class="card"><div class="card-icon">📊</div><h3>Google Sheets Mini-CRM</h3><p>Live client dashboard, KPI tracker, MRR summary — no CRM subscription needed.</p></div>
+      <div class="card"><div class="card-icon">💬</div><h3>WhatsApp + Email Sequences</h3><p>Follow-ups, document reminders, renewals, and cross-sell campaigns — automated.</p></div>
+      <div class="card"><div class="card-icon">💳</div><h3>Stripe Billing & Subscriptions</h3><p>Setup fee collection, monthly recurring billing, payment failure sequences.</p></div>
+      <div class="card"><div class="card-icon">🤖</div><h3>Claude-Generated SOPs</h3><p>Standard operating procedures and a mini training course for your team — in 3 languages.</p></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="flows-en">
+    <div class="section-label">Automation Flows</div>
+    <h2 class="section-title">Three mission-critical flows, fully wired</h2>
+    <p class="section-sub">Stripe webhooks trigger n8n, which orchestrates Google Workspace + Claude + WhatsApp — zero manual steps.</p>
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+      <div class="flow-wrap">
+        <div class="flow-title">🟢 Flow 1 — New Client Onboarding <span style="font-size:.75rem;color:var(--gray400);font-weight:400">trigger: checkout.session.completed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Stripe<br>Webhook</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Router</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Write to<br>Sheets CRM</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node drive">📁</div><div class="flow-step-lbl">Create<br>Drive Folder</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Generates Pack</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Send via<br>Gmail</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Slack<br>#payments</div></div>
+        </div>
+      </div>
+
+      <div class="flow-wrap">
+        <div class="flow-title">🔄 Flow 2 — Renewal Success <span style="font-size:.75rem;color:var(--gray400);font-weight:400">trigger: invoice.payment_succeeded</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Stripe<br>Invoice</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Router</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Update<br>Dates & MRR</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Thank-You Email</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Send<br>Gmail</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Slack<br>#payments</div></div>
+        </div>
+      </div>
+
+      <div class="flow-wrap">
+        <div class="flow-title">🔴 Flow 3 — Payment Failed Sequence <span style="font-size:.75rem;color:var(--gray400);font-weight:400">trigger: invoice.payment_failed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Stripe<br>Failed</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Router</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Mark<br>past_due</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>EN/FR Reminder</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Gmail<br>Day 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node whatsapp">💬</div><div class="flow-step-lbl">WhatsApp<br>Day 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Slack<br>at_risk alert</div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="pricing-en">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple, transparent pricing</h2>
+    <p class="section-sub">One setup fee + a low monthly retainer. No hidden costs. Pause anytime.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">🚀 AI Back-Office Setup</h3>
+        <div class="price-amt">$800 <small>one-time</small></div>
+        <div class="price-label">Complete done-for-you implementation</div>
+        <ul class="price-features">
+          <li>Workflow mapping session</li>
+          <li>Google Sheets CRM + KPI dashboard</li>
+          <li>n8n flows wired to Stripe</li>
+          <li>WhatsApp + Gmail sequences</li>
+          <li>Drive folder structure</li>
+          <li>Claude SOP generation</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Get Started</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="badge-featured">Most Popular</div>
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">📅 AI Back-Office Monthly</h3>
+        <div class="price-amt">$249 <small>/ month</small></div>
+        <div class="price-label">Ongoing automation + support retainer</div>
+        <ul class="price-features">
+          <li>All setup features included</li>
+          <li>Monthly KPI report (Claude-generated)</li>
+          <li>Renewal + re-engagement sequences</li>
+          <li>Flow updates as your business grows</li>
+          <li>WhatsApp template updates</li>
+          <li>Email content packs (EN/FR/HT)</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Subscribe Now</a>
+        <div class="price-upsell">+ Add-ons: content packs · extra automations · coaching</div>
+      </div>
+      <div class="pricing-card">
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">🏢 Agency / Team Plan</h3>
+        <div class="price-amt">$400 <small>/ month</small></div>
+        <div class="price-label">For shops with 5–20 advisors</div>
+        <ul class="price-features">
+          <li>Multi-advisor Sheets CRM</li>
+          <li>Team onboarding training</li>
+          <li>Custom branding on all docs</li>
+          <li>Priority Slack support</li>
+          <li>Quarterly strategy review</li>
+          <li>Custom automation packs</li>
+        </ul>
+        <a href="#" class="btn-outline" style="display:block;text-align:center;padding:.85rem 2rem;border-radius:8px;border:1px solid var(--gray200);font-weight:700;color:var(--navy);">Contact Us</a>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Tech Stack</div>
+    <h2 class="section-title">Built on tools you already trust</h2>
+    <p class="section-sub">No proprietary lock-in. Every component is replaceable. You own your data.</p>
+    <div class="stack-grid">
+      <div class="stack-chip"><span class="stack-dot dot-ai"></span>Claude AI</div>
+      <div class="stack-chip"><span class="stack-dot dot-ai"></span>Claude Code</div>
+      <div class="stack-chip"><span class="stack-dot dot-auto"></span>n8n</div>
+      <div class="stack-chip"><span class="stack-dot dot-auto"></span>Google Apps Script</div>
+      <div class="stack-chip"><span class="stack-dot dot-data"></span>Google Sheets</div>
+      <div class="stack-chip"><span class="stack-dot dot-data"></span>Google Drive</div>
+      <div class="stack-chip"><span class="stack-dot dot-data"></span>Google Docs</div>
+      <div class="stack-chip"><span class="stack-dot dot-comm"></span>Gmail</div>
+      <div class="stack-chip"><span class="stack-dot dot-comm"></span>WhatsApp Business API</div>
+      <div class="stack-chip"><span class="stack-dot dot-bill"></span>Stripe Payments</div>
+      <div class="stack-chip"><span class="stack-dot dot-bill"></span>Stripe Billing</div>
+      <div class="stack-chip"><span class="stack-dot dot-sched"></span>Calendly / TidyCal</div>
+      <div class="stack-chip"><span class="stack-dot dot-sched"></span>Slack</div>
+      <div class="stack-chip"><span class="stack-dot dot-comm"></span>Meta Ads</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Target Markets</div>
+    <h2 class="section-title">French-speaking markets, global reach</h2>
+    <p class="section-sub">Headquartered in Port-au-Prince. Serving brokers and advisors across 5 regions.</p>
+    <div class="regions-grid">
+      <div class="region-card"><div class="region-flag">🇨🇦</div><div class="region-name">Canada</div><div class="region-sub">Québec & francophone</div></div>
+      <div class="region-card"><div class="region-flag">🇫🇷</div><div class="region-name">France</div><div class="region-sub">Métropole & DOM-TOM</div></div>
+      <div class="region-card"><div class="region-flag">🇧🇪</div><div class="region-name">Belgium</div><div class="region-sub">Wallonie & Bruxelles</div></div>
+      <div class="region-card"><div class="region-flag">🌍</div><div class="region-name">Francophone Africa</div><div class="region-sub">Côte d'Ivoire · Sénégal · etc.</div></div>
+      <div class="region-card"><div class="region-flag">🇭🇹</div><div class="region-name">Caribbean Diaspora</div><div class="region-sub">Haiti · Martinique · Guadeloupe</div></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Budget Allocation</div>
+    <h2 class="section-title">$1,000 seed capital breakdown</h2>
+    <p class="section-sub">Hard cap. Every dollar allocated to revenue-generating activities first.</p>
+    <table class="budget-table">
+      <thead><tr><th>Item</th><th>Type</th><th class="cost">Cost (USD)</th></tr></thead>
+      <tbody>
+        <tr><td>n8n Cloud / Railway hosting</td><td>Monthly</td><td class="cost">$10–20/mo</td></tr>
+        <tr><td>Claude API (usage-based)</td><td>Monthly</td><td class="cost">$20–50/mo</td></tr>
+        <tr><td>WhatsApp API (360dialog / Twilio)</td><td>Monthly</td><td class="cost">$10–30/mo</td></tr>
+        <tr><td>Google Workspace</td><td>Monthly</td><td class="cost">$12/mo</td></tr>
+        <tr><td>Domain + landing page (Carrd)</td><td>One-time</td><td class="cost">$19</td></tr>
+        <tr><td>Meta Ads (first test)</td><td>Campaign</td><td class="cost">$200–300</td></tr>
+        <tr><td>Stripe</td><td>Per transaction</td><td class="cost">$0 upfront</td></tr>
+        <tr><td><strong>Buffer / reserve</strong></td><td></td><td class="cost"><strong>~$300</strong></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Execution Roadmap</div>
+    <h2 class="section-title">From zero to 3 paying clients</h2>
+    <p class="section-sub">Build only what's needed to close the next client. Automate what's already working.</p>
+    <div class="roadmap">
+      <div class="rm-phase p1">
+        <div class="rm-label">Phase 1 · Days 1–7</div>
+        <div class="rm-title">🏗️ Foundation</div>
+        <ul class="rm-items">
+          <li>Stripe products + payment links</li>
+          <li>Google Sheets CRM schema</li>
+          <li>Drive folder template</li>
+          <li>Domain + Carrd landing page</li>
+        </ul>
+      </div>
+      <div class="rm-phase p2">
+        <div class="rm-label">Phase 2 · Days 7–21</div>
+        <div class="rm-title">⚡ Core Automations</div>
+        <ul class="rm-items">
+          <li>n8n webhook → Sheets flow</li>
+          <li>Onboarding email via Gmail</li>
+          <li>Payment failed sequence</li>
+          <li>Slack notifications</li>
+        </ul>
+      </div>
+      <div class="rm-phase p3">
+        <div class="rm-label">Phase 3 · Days 14–28</div>
+        <div class="rm-title">🤖 Claude Integration</div>
+        <ul class="rm-items">
+          <li>Claude API via n8n HTTP node</li>
+          <li>Welcome email (EN/FR/HT)</li>
+          <li>SOP generation prompts</li>
+          <li>Weekly KPI report prompt</li>
+        </ul>
+      </div>
+      <div class="rm-phase p4">
+        <div class="rm-label">Phase 4 · Days 21–45</div>
+        <div class="rm-title">📣 Go-to-Market</div>
+        <ul class="rm-items">
+          <li>30 LinkedIn DMs/day (French)</li>
+          <li>Meta Ads $200 test budget</li>
+          <li>Lead magnet PDF (3 automations)</li>
+          <li>First 3 clients → scale</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /lang-en -->
+
+
+<!-- ══════════════════════════════════════════════
+     FRANÇAIS
+══════════════════════════════════════════════ -->
+<div id="lang-fr" class="lang-section">
+
+  <div class="hero">
+    <div class="hero-badge">🌍 Marchés francophones mondiaux · QG Port-au-Prince</div>
+    <h1>Le <em>Back-Office IA</em><br>pour Courtiers &amp; Conseillers<br>Financiers</h1>
+    <p>De la capture de leads au renouvellement — entièrement automatisé, prêt à l'emploi, déployé en quelques jours. Propulsé par Claude IA, Google Workspace, n8n et Stripe.</p>
+    <div class="hero-cta">
+      <a href="#pricing-fr" class="btn-primary">Voir les tarifs →</a>
+      <a href="#flows-fr" class="btn-outline">Voir les automatisations</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat"><div class="stat-val">249 $</div><div class="stat-lbl">/ mois</div></div>
+      <div class="stat"><div class="stat-val">800 $</div><div class="stat-lbl">frais de mise en place</div></div>
+      <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">flux automatisés</div></div>
+      <div class="stat"><div class="stat-val">3</div><div class="stat-lbl">langues supportées</div></div>
+      <div class="stat"><div class="stat-val">1 000 $</div><div class="stat-lbl">capital de démarrage</div></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-label">Ce qui est inclus</div>
+    <h2 class="section-title">Tout ce dont un petit cabinet a besoin</h2>
+    <p class="section-sub">Pas d'équipe technique. Pas de code personnalisé impossible à maintenir. Un opérateur + des automatisations puissantes.</p>
+    <div class="cards">
+      <div class="card"><div class="card-icon">🗂️</div><h3>Cartographie des processus</h3><p>Votre processus lead-to-renewal cartographié, documenté et automatisé de bout en bout.</p></div>
+      <div class="card"><div class="card-icon">📋</div><h3>Formulaires d'admission + KYC</h3><p>Formulaires intelligents capturant les données clients, profils de risque et demandes de documents.</p></div>
+      <div class="card"><div class="card-icon">📊</div><h3>Mini-CRM Google Sheets</h3><p>Tableau de bord client en direct, suivi KPI, résumé MRR — sans abonnement CRM.</p></div>
+      <div class="card"><div class="card-icon">💬</div><h3>Séquences WhatsApp + Email</h3><p>Relances, rappels de documents, renouvellements et campagnes cross-sell — automatisés.</p></div>
+      <div class="card"><div class="card-icon">💳</div><h3>Facturation Stripe</h3><p>Collecte de frais de mise en place, facturation mensuelle récurrente, séquences d'échec de paiement.</p></div>
+      <div class="card"><div class="card-icon">🤖</div><h3>SOPs générés par Claude</h3><p>Procédures opérationnelles standard et mini-formation pour votre équipe — en 3 langues.</p></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="flows-fr">
+    <div class="section-label">Flux d'automatisation</div>
+    <h2 class="section-title">Trois flux critiques, entièrement câblés</h2>
+    <p class="section-sub">Les webhooks Stripe déclenchent n8n, qui orchestre Google Workspace + Claude + WhatsApp — zéro étape manuelle.</p>
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+      <div class="flow-wrap">
+        <div class="flow-title">🟢 Flux 1 — Onboarding nouveau client <span style="font-size:.75rem;color:var(--gray400);font-weight:400">déclencheur : checkout.session.completed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Webhook<br>Stripe</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Routeur</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Écriture<br>Sheets CRM</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node drive">📁</div><div class="flow-step-lbl">Créer<br>Dossier Drive</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Génère le pack</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Envoi<br>Gmail</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Slack<br>#paiements</div></div>
+        </div>
+      </div>
+      <div class="flow-wrap">
+        <div class="flow-title">🔴 Flux 3 — Séquence échec paiement <span style="font-size:.75rem;color:var(--gray400);font-weight:400">déclencheur : invoice.payment_failed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Stripe<br>Échec</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Routeur</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Marquer<br>past_due</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Relance FR/EN</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Gmail<br>Jour 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node whatsapp">💬</div><div class="flow-step-lbl">WhatsApp<br>Jour 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Alerte<br>at_risk</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="pricing-fr">
+    <div class="section-label">Tarifs</div>
+    <h2 class="section-title">Prix simples et transparents</h2>
+    <p class="section-sub">Un frais de mise en place unique + un faible abonnement mensuel. Sans frais cachés. Résiliable à tout moment.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">🚀 Mise en place Back-Office IA</h3>
+        <div class="price-amt">800 $ <small>unique</small></div>
+        <div class="price-label">Implémentation complète clé en main</div>
+        <ul class="price-features">
+          <li>Session de cartographie des flux</li>
+          <li>CRM Google Sheets + tableau de bord KPI</li>
+          <li>Flux n8n connectés à Stripe</li>
+          <li>Séquences WhatsApp + Gmail</li>
+          <li>Structure de dossiers Drive</li>
+          <li>Génération de SOPs par Claude</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Commencer</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="badge-featured">Plus populaire</div>
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">📅 Back-Office IA Mensuel</h3>
+        <div class="price-amt">249 $ <small>/ mois</small></div>
+        <div class="price-label">Automatisation continue + support</div>
+        <ul class="price-features">
+          <li>Tout ce qui est inclus dans la mise en place</li>
+          <li>Rapport KPI mensuel (généré par Claude)</li>
+          <li>Séquences de renouvellement et relance</li>
+          <li>Mises à jour des flux au fil de la croissance</li>
+          <li>Mises à jour des modèles WhatsApp</li>
+          <li>Packs de contenu email (EN/FR/HT)</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">S'abonner maintenant</a>
+        <div class="price-upsell">+ Compléments : packs de contenu · automatisations · coaching</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Marchés cibles</div>
+    <h2 class="section-title">Marchés francophones, portée mondiale</h2>
+    <p class="section-sub">Basé à Port-au-Prince. Au service de courtiers et conseillers dans 5 régions.</p>
+    <div class="regions-grid">
+      <div class="region-card"><div class="region-flag">🇨🇦</div><div class="region-name">Canada</div><div class="region-sub">Québec & francophone</div></div>
+      <div class="region-card"><div class="region-flag">🇫🇷</div><div class="region-name">France</div><div class="region-sub">Métropole & DOM-TOM</div></div>
+      <div class="region-card"><div class="region-flag">🇧🇪</div><div class="region-name">Belgique</div><div class="region-sub">Wallonie & Bruxelles</div></div>
+      <div class="region-card"><div class="region-flag">🌍</div><div class="region-name">Afrique francophone</div><div class="region-sub">Côte d'Ivoire · Sénégal · etc.</div></div>
+      <div class="region-card"><div class="region-flag">🇭🇹</div><div class="region-name">Diaspora caribéenne</div><div class="region-sub">Haïti · Martinique · Guadeloupe</div></div>
+    </div>
+  </section>
+
+</div><!-- /lang-fr -->
+
+
+<!-- ══════════════════════════════════════════════
+     KREYÒL AYISYEN
+══════════════════════════════════════════════ -->
+<div id="lang-ht" class="lang-section">
+
+  <div class="hero">
+    <div class="hero-badge">🌍 Mache Mondyal Frankofòn · Pòtoprens, Ayiti</div>
+    <h1>Sistèm <em>Back-Office IA</em><br>pou Koutye ak Konseyè<br>Finansye</h1>
+    <p>Depi kaptire leads jiska renouvèlman — otomatize nèt, prè pou itilize, deploye an kèlke jou. Alimante pa Claude IA, Google Workspace, n8n ak Stripe.</p>
+    <div class="hero-cta">
+      <a href="#pricing-ht" class="btn-primary">Gade Pri yo →</a>
+      <a href="#flows-ht" class="btn-outline">Wè Otomatizasyon yo</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat"><div class="stat-val">$249</div><div class="stat-lbl">chak mwa</div></div>
+      <div class="stat"><div class="stat-val">$800</div><div class="stat-lbl">frè konfigirasyon</div></div>
+      <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">flou otomatize</div></div>
+      <div class="stat"><div class="stat-val">3</div><div class="stat-lbl">lang sipòte</div></div>
+      <div class="stat"><div class="stat-val">$1K</div><div class="stat-lbl">kapital depa</div></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-label">Sa ki enkli</div>
+    <h2 class="section-title">Tout sa yon ti kabinè bezwen</h2>
+    <p class="section-sub">Pa bezwen gwo ekip teknoloji. Yon operatè + otomatizasyon pisan.</p>
+    <div class="cards">
+      <div class="card"><div class="card-icon">🗂️</div><h3>Karyografi Pwosesis yo</h3><p>Pwosesis lead-to-renewal ou a karyografye, dokimante epi otomatize nèt.</p></div>
+      <div class="card"><div class="card-icon">📋</div><h3>Fòm Admisyon + KYC</h3><p>Fòm entèlijan ki kaptire done kliyan, pwofil risk ak demann dokiman.</p></div>
+      <div class="card"><div class="card-icon">📊</div><h3>Mini-CRM Google Sheets</h3><p>Tablo de bò kliyan an tan reyèl, swivi KPI, rezime MRR — san abònman CRM.</p></div>
+      <div class="card"><div class="card-icon">💬</div><h3>Sekans WhatsApp + Imel</h3><p>Swivi, rapèl dokiman, renouvèlman ak kanpay — otomatize.</p></div>
+      <div class="card"><div class="card-icon">💳</div><h3>Faktourasyon Stripe</h3><p>Koleksyon frè depa, faktourasyon rekiran chak mwa, sekans echèk peman.</p></div>
+      <div class="card"><div class="card-icon">🤖</div><h3>SOP Jenere pa Claude</h3><p>Pwosedi operasyonèl estanda ak mini-fòmasyon pou ekip ou a — nan 3 lang.</p></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="flows-ht">
+    <div class="section-label">Flou Otomatizasyon</div>
+    <h2 class="section-title">Twa flou kritik, konekte nèt</h2>
+    <p class="section-sub">Webhook Stripe deklanše n8n, ki òganize Google Workspace + Claude + WhatsApp — zewo etap manyèl.</p>
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+      <div class="flow-wrap">
+        <div class="flow-title">🟢 Flou 1 — Onboarding Nouvo Kliyan <span style="font-size:.75rem;color:var(--gray400);font-weight:400">deklancha : checkout.session.completed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Webhook<br>Stripe</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Routeur</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Ekri nan<br>Sheets CRM</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node drive">📁</div><div class="flow-step-lbl">Kreye<br>Dosye Drive</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Jenere Pak la</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Voye<br>Gmail</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Slack<br>#peman</div></div>
+        </div>
+      </div>
+      <div class="flow-wrap">
+        <div class="flow-title">🔴 Flou 3 — Sekans Echèk Peman <span style="font-size:.75rem;color:var(--gray400);font-weight:400">deklancha : invoice.payment_failed</span></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-node stripe">💳</div><div class="flow-step-lbl">Stripe<br>Echèk</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node n8n">⚡</div><div class="flow-step-lbl">n8n<br>Routeur</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node sheet">📊</div><div class="flow-step-lbl">Mak<br>past_due</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node claude">🤖</div><div class="flow-step-lbl">Claude<br>Raple HT/FR</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node gmail">📧</div><div class="flow-step-lbl">Gmail<br>Jou 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node whatsapp">💬</div><div class="flow-step-lbl">WhatsApp<br>Jou 0</div></div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step"><div class="flow-node slack">🔔</div><div class="flow-step-lbl">Alèt<br>at_risk</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="pricing-ht">
+    <div class="section-label">Pri yo</div>
+    <h2 class="section-title">Pri senp, transparan</h2>
+    <p class="section-sub">Yon frè konfigirasyon inik + yon abònman mansyèl ba. San frè kache. Kanpe nenpòt ki lè.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">🚀 Konfigirasyon Back-Office IA</h3>
+        <div class="price-amt">$800 <small>yon sèl fwa</small></div>
+        <div class="price-label">Enfrastrikti konplè prè pou itilize</div>
+        <ul class="price-features">
+          <li>Sesyon karyografi flou</li>
+          <li>CRM Google Sheets + tablo de bò KPI</li>
+          <li>Flou n8n konekte Stripe</li>
+          <li>Sekans WhatsApp + Gmail</li>
+          <li>Estrikti dosye Drive</li>
+          <li>Jenere SOP ak Claude</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Kòmanse</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="badge-featured">Pi Popilè</div>
+        <h3 style="margin-bottom:.5rem;font-size:1.1rem;">📅 Back-Office IA Mansyèl</h3>
+        <div class="price-amt">$249 <small>/ mwa</small></div>
+        <div class="price-label">Otomatizasyon kontinyèl + sipò</div>
+        <ul class="price-features">
+          <li>Tout sa ki enkli nan konfigirasyon an</li>
+          <li>Rapò KPI mansyèl (jenere pa Claude)</li>
+          <li>Sekans renouvèlman ak relans</li>
+          <li>Mizajou flou pandan kwasans</li>
+          <li>Mizajou modèl WhatsApp</li>
+          <li>Pak kontni imel (EN/FR/HT)</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Abòne Koulye A</a>
+        <div class="price-upsell">+ Ekstansyon: pak kontni · otomatizasyon · coaching</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-label">Mache Sib yo</div>
+    <h2 class="section-title">Mache frankofòn, pòte mondyal</h2>
+    <p class="section-sub">Baz nan Pòtoprens. Sèvis pou koutye ak konseyè nan 5 rejyon.</p>
+    <div class="regions-grid">
+      <div class="region-card"><div class="region-flag">🇨🇦</div><div class="region-name">Kanada</div><div class="region-sub">Kebèk & frankofòn</div></div>
+      <div class="region-card"><div class="region-flag">🇫🇷</div><div class="region-name">Lafrans</div><div class="region-sub">Metropòl & DOM-TOM</div></div>
+      <div class="region-card"><div class="region-flag">🇧🇪</div><div class="region-name">Bèljik</div><div class="region-sub">Waloni & Briksel</div></div>
+      <div class="region-card"><div class="region-flag">🌍</div><div class="region-name">Afrik Frankofòn</div><div class="region-sub">Kot divwa · Senegàl · etc.</div></div>
+      <div class="region-card"><div class="region-flag">🇭🇹</div><div class="region-name">Dyaspora Karayib</div><div class="region-sub">Ayiti · Matinik · Gwadloup</div></div>
+    </div>
+  </section>
+
+</div><!-- /lang-ht -->
+
+<footer>
+  <p>Built with <strong>Claude AI · n8n · Google Workspace · Stripe</strong> &nbsp;·&nbsp; Headquartered in Port-au-Prince, Haiti &nbsp;·&nbsp; Serving French-speaking markets globally</p>
+  <p style="margin-top:.5rem;opacity:.5;">© 2026 AI BackOffice — EN · FR · HT</p>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.querySelectorAll('.lang-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.lang-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('lang-' + lang).classList.add('active');
+    document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
