@@ -1,0 +1,1548 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xtra Assurance — White Paper 2026</title>
+  <meta name="description" content="White Paper Xtra Assurance — Assurance Mototaxi Nouvelle Génération. Dubai Quality, Ayiti Protection." />
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Tokens ── */
+    :root {
+      --gold:        #D4AF37;
+      --gold-light:  #F0D060;
+      --gold-dim:    rgba(212,175,55,.15);
+      --navy:        #001233;
+      --navy-mid:    #0a1f44;
+      --navy-light:  #122755;
+      --white:       #ffffff;
+      --offwhite:    #f7f8fc;
+      --muted:       #6b7a99;
+      --border:      rgba(212,175,55,.25);
+      --success:     #00d084;
+      --danger:      #ff453a;
+      --warn:        #ff9500;
+      --font:        'Georgia', 'Times New Roman', serif;
+      --sans:        'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono:        'Courier New', Courier, monospace;
+    }
+
+    /* ── Base ── */
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--offwhite);
+      color: var(--navy);
+      line-height: 1.75;
+    }
+
+    /* ── Page wrapper ── */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--white);
+      box-shadow: 0 4px 40px rgba(0,18,51,.12);
+    }
+
+    /* ── Cover ── */
+    .cover {
+      background: linear-gradient(160deg, var(--navy) 0%, var(--navy-mid) 55%, #0d2a5e 100%);
+      color: var(--white);
+      padding: 80px 64px 72px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 80% -10%, rgba(212,175,55,.18) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 300px at -5% 110%, rgba(212,175,55,.10) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cover-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 56px;
+    }
+
+    .cover-logo-mark {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 20px rgba(212,175,55,.4);
+      flex-shrink: 0;
+    }
+
+    .cover-logo-name {
+      font-family: var(--sans);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: var(--gold-light);
+    }
+
+    .cover-eyebrow {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+      opacity: .9;
+    }
+
+    .cover-title {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+
+    .cover-subtitle {
+      font-size: clamp(16px, 2.5vw, 22px);
+      color: var(--gold-light);
+      font-style: italic;
+      margin-bottom: 48px;
+      opacity: .9;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .cover-meta-item {
+      font-family: var(--sans);
+    }
+
+    .cover-meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      opacity: .7;
+      margin-bottom: 2px;
+    }
+
+    .cover-meta-value {
+      font-size: 13px;
+      color: rgba(255,255,255,.85);
+    }
+
+    .cover-bar {
+      margin-top: 56px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, transparent 100%);
+      border-radius: 2px;
+    }
+
+    /* ── Table of Contents ── */
+    .toc {
+      padding: 48px 64px;
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    .toc-title {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 24px;
+    }
+
+    .toc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 48px;
+    }
+
+    .toc-item {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-family: var(--sans);
+      font-size: 13px;
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      transition: color .2s;
+    }
+
+    .toc-item:hover { color: var(--gold-light); }
+
+    .toc-num {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--gold);
+      opacity: .8;
+      min-width: 20px;
+    }
+
+    /* ── Body content ── */
+    .content {
+      padding: 0 64px 80px;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding-top: 64px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--gold-dim);
+    }
+
+    .section-num {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      color: var(--gold);
+      background: var(--gold-dim);
+      padding: 4px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    h2.section-title {
+      font-family: var(--sans);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+
+    h3 {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 32px 0 12px;
+      padding-left: 12px;
+      border-left: 3px solid var(--gold);
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: #2a3550;
+      font-size: 15px;
+    }
+
+    /* ── Blockquote ── */
+    .epigraph {
+      margin: 0;
+      padding: 32px 64px;
+      background: var(--navy);
+      border-left: none;
+    }
+
+    .epigraph p {
+      font-size: 16px;
+      font-style: italic;
+      color: rgba(255,255,255,.85);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .epigraph p::before { content: '\201C'; color: var(--gold); font-size: 40px; line-height: 0; vertical-align: -14px; margin-right: 4px; }
+    .epigraph p::after  { content: '\201D'; color: var(--gold); font-size: 40px; line-height: 0; vertical-align: -14px; margin-left: 4px; }
+
+    /* ── Exec summary cards ── */
+    .exec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .exec-card {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .exec-card-value {
+      font-family: var(--sans);
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--gold-light);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .exec-card-label {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: rgba(255,255,255,.65);
+      line-height: 1.3;
+    }
+
+    .kv-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 16px 0 24px;
+    }
+
+    .kv-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: #2a3550;
+    }
+
+    .kv-list li::before {
+      content: '✦';
+      color: var(--gold);
+      font-size: 11px;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; margin: 20px 0 28px; border-radius: 10px; border: 1px solid var(--border); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+
+    thead {
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+    }
+
+    tbody tr:nth-child(even) { background: var(--gold-dim); }
+    tbody tr:nth-child(odd)  { background: var(--white); }
+
+    tbody td {
+      padding: 11px 16px;
+      color: #2a3550;
+      border-bottom: 1px solid rgba(0,18,51,.06);
+      vertical-align: top;
+    }
+
+    /* ── Process diagram ── */
+    .process-box {
+      background: var(--navy);
+      border-radius: 14px;
+      padding: 32px 36px;
+      margin: 20px 0 28px;
+      color: var(--white);
+    }
+
+    .process-title {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    .process-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .process-step {
+      display: flex;
+      gap: 20px;
+    }
+
+    .process-step-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .process-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--navy);
+      flex-shrink: 0;
+    }
+
+    .process-connector {
+      width: 2px;
+      flex: 1;
+      min-height: 28px;
+      background: linear-gradient(to bottom, var(--gold), rgba(212,175,55,.2));
+      margin: 4px 0;
+    }
+
+    .process-body {
+      padding-bottom: 28px;
+      flex: 1;
+    }
+
+    .process-step:last-child .process-body { padding-bottom: 0; }
+
+    .process-step-title {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+      padding-top: 7px;
+    }
+
+    .process-step-text {
+      font-family: var(--sans);
+      font-size: 12px;
+      color: rgba(255,255,255,.72);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .process-step-text strong { color: var(--gold); }
+
+    /* ── Stack diagram ── */
+    .stack {
+      border-radius: 14px;
+      overflow: hidden;
+      margin: 20px 0 28px;
+      border: 1px solid var(--border);
+    }
+
+    .stack-layer {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stack-layer:last-child { border-bottom: none; }
+
+    .stack-layer:nth-child(1) { background: var(--navy); }
+    .stack-layer:nth-child(2) { background: var(--navy-light); }
+    .stack-layer:nth-child(3) { background: var(--navy-mid); }
+
+    .stack-layer-label {
+      font-family: var(--sans);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .stack-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(212,175,55,.15);
+      color: var(--gold-light);
+      border: 1px solid rgba(212,175,55,.3);
+      white-space: nowrap;
+    }
+
+    /* ── Flywheel ── */
+    .flywheel {
+      display: grid;
+      grid-template-columns: 1fr 32px 1fr 32px 1fr;
+      gap: 0;
+      align-items: center;
+      margin: 20px 0 28px;
+    }
+
+    .flywheel-node {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+    }
+
+    .flywheel-node-icon { font-size: 22px; margin-bottom: 6px; }
+
+    .flywheel-node-text {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: rgba(255,255,255,.8);
+      line-height: 1.4;
+    }
+
+    .flywheel-arrow {
+      text-align: center;
+      color: var(--gold);
+      font-size: 20px;
+    }
+
+    /* ── Roadmap ── */
+    .roadmap {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 20px 0 28px;
+      position: relative;
+    }
+
+    .roadmap::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 20px;
+      bottom: 20px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--gold), rgba(212,175,55,.2));
+    }
+
+    .roadmap-item {
+      display: flex;
+      gap: 20px;
+      padding: 0 0 24px 0;
+    }
+
+    .roadmap-item:last-child { padding-bottom: 0; }
+
+    .roadmap-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .roadmap-dot.done    { background: linear-gradient(135deg, var(--gold), var(--gold-light)); }
+    .roadmap-dot.active  { background: var(--navy); border: 2px solid var(--gold); }
+    .roadmap-dot.future  { background: var(--navy-mid); border: 2px solid rgba(212,175,55,.3); }
+
+    .roadmap-body { flex: 1; padding-top: 8px; }
+
+    .roadmap-phase {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+
+    .roadmap-name {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+
+    .roadmap-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .roadmap-items li {
+      font-family: var(--sans);
+      font-size: 12px;
+      color: #4a5878;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .roadmap-items li::before { content: '→'; color: var(--gold); flex-shrink: 0; }
+
+    /* ── Positioning chart ── */
+    .positioning {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin: 20px 0 28px;
+      position: relative;
+      height: 280px;
+      background: var(--navy);
+    }
+
+    .pos-axis-h, .pos-axis-v {
+      position: absolute;
+      background: rgba(212,175,55,.25);
+    }
+
+    .pos-axis-h {
+      left: 0; right: 0;
+      top: 50%;
+      height: 1px;
+    }
+
+    .pos-axis-v {
+      top: 0; bottom: 0;
+      left: 50%;
+      width: 1px;
+    }
+
+    .pos-label {
+      position: absolute;
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(212,175,55,.6);
+    }
+
+    .pos-label.top    { top: 12px;  left: 50%; transform: translateX(-50%); }
+    .pos-label.bottom { bottom: 12px; left: 50%; transform: translateX(-50%); }
+    .pos-label.left   { left: 12px;  top: 50%; transform: translateY(-50%) rotate(-90deg); }
+    .pos-label.right  { right: 12px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+
+    .pos-dot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+    }
+
+    .pos-dot-circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin: 0 auto 4px;
+    }
+
+    .pos-dot-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* ── KPI grid ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 28px;
+    }
+
+    .kpi-card {
+      background: var(--navy);
+      border-radius: 10px;
+      padding: 16px 14px;
+    }
+
+    .kpi-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-family: var(--sans);
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+
+    .kpi-sub {
+      font-family: var(--sans);
+      font-size: 10px;
+      color: rgba(255,255,255,.45);
+    }
+
+    /* ── Highlight box ── */
+    .highlight {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      border-radius: 0 10px 10px 0;
+      padding: 20px 24px;
+      margin: 20px 0 28px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: rgba(255,255,255,.85);
+      line-height: 1.7;
+    }
+
+    .highlight strong { color: var(--gold-light); }
+
+    /* ── Risk table ── */
+    .risk-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 16px 0 28px;
+    }
+
+    .risk-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+      background: var(--offwhite);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .risk-threat {
+      background: var(--navy);
+      padding: 14px 16px;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+    }
+
+    .risk-mitigation {
+      padding: 14px 16px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: #2a3550;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── Plan cards ── */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0 28px;
+    }
+
+    .plan-card {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .plan-header {
+      padding: 20px 24px;
+      background: var(--navy);
+    }
+
+    .plan-name {
+      font-family: var(--sans);
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--gold-light);
+      margin-bottom: 2px;
+    }
+
+    .plan-price {
+      font-family: var(--sans);
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--white);
+    }
+
+    .plan-price span {
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,.5);
+    }
+
+    .plan-features {
+      padding: 20px 24px;
+      background: var(--white);
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .plan-features li {
+      font-family: var(--sans);
+      font-size: 12px;
+      color: #2a3550;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .plan-features li .check { color: var(--success); flex-shrink: 0; }
+    .plan-features li .cross { color: var(--muted); flex-shrink: 0; }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--navy);
+      padding: 40px 64px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-family: var(--sans);
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--gold-light);
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    .footer-tagline {
+      font-family: var(--sans);
+      font-size: 12px;
+      color: rgba(255,255,255,.45);
+      font-style: italic;
+      margin-bottom: 24px;
+    }
+
+    .footer-bar {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .footer-meta {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: rgba(255,255,255,.3);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--gold-dim);
+      margin: 0 64px;
+    }
+
+    /* ── Utilities ── */
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+    .gold { color: var(--gold); }
+    .success { color: var(--success); }
+
+    /* ── Print ── */
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; max-width: none; }
+      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .toc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section { page-break-inside: avoid; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .cover, .toc, .content, .footer { padding-left: 28px; padding-right: 28px; }
+      .divider { margin: 0 28px; }
+      .epigraph { padding: 28px; }
+      .exec-grid, .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .plan-grid { grid-template-columns: 1fr; }
+      .toc-grid { grid-template-columns: 1fr; }
+      .flywheel { grid-template-columns: 1fr; }
+      .flywheel-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════════════ COVER -->
+  <div class="cover">
+    <div class="cover-logo">
+      <div class="cover-logo-mark">🛡️</div>
+      <div class="cover-logo-name">XTRA ASSURANCE</div>
+    </div>
+
+    <div class="cover-eyebrow">White Paper · Édition 1.0</div>
+    <h1 class="cover-title">Assurance Mototaxi<br>Nouvelle Génération</h1>
+    <p class="cover-subtitle">Dubai Quality &nbsp;·&nbsp; Ayiti Protection</p>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Date</div>
+        <div class="cover-meta-value">Mai 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Statut</div>
+        <div class="cover-meta-value">Confidentiel</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Version</div>
+        <div class="cover-meta-value">1.0</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Marché</div>
+        <div class="cover-meta-value">Haïti 🇭🇹</div>
+      </div>
+    </div>
+
+    <div class="cover-bar"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ EPIGRAPH -->
+  <div class="epigraph">
+    <p>Le marché haïtien n'a pas besoin d'une version dégradée de l'assurance mondiale. Il mérite la même rigueur technologique qu'à Dubaï, adaptée à sa réalité.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ TOC -->
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <div class="toc-grid">
+      <a href="#exec"    class="toc-item"><span class="toc-num">00</span>Résumé Exécutif</a>
+      <a href="#s6"      class="toc-item"><span class="toc-num">06</span>Analyse Concurrentielle</a>
+      <a href="#s1"      class="toc-item"><span class="toc-num">01</span>Analyse du Marché</a>
+      <a href="#s7"      class="toc-item"><span class="toc-num">07</span>Feuille de Route</a>
+      <a href="#s2"      class="toc-item"><span class="toc-num">02</span>La Solution</a>
+      <a href="#s8"      class="toc-item"><span class="toc-num">08</span>Indicateurs KPI</a>
+      <a href="#s3"      class="toc-item"><span class="toc-num">03</span>Architecture Technologique</a>
+      <a href="#s9"      class="toc-item"><span class="toc-num">09</span>Équipe &amp; Gouvernance</a>
+      <a href="#s4"      class="toc-item"><span class="toc-num">04</span>Modèle Économique</a>
+      <a href="#s10"     class="toc-item"><span class="toc-num">10</span>Conclusion</a>
+      <a href="#s5"      class="toc-item"><span class="toc-num">05</span>Gestion des Risques</a>
+      <a href="#"        class="toc-item"><span class="toc-num"></span></a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ CONTENT -->
+  <div class="content">
+
+    <!-- ── 00 EXEC SUMMARY ── -->
+    <div class="section" id="exec">
+      <div class="section-header">
+        <span class="section-num">00</span>
+        <h2 class="section-title">Résumé Exécutif</h2>
+      </div>
+
+      <p>Haïti compte plus de <strong>800 000 opérateurs de mototaxi</strong> qui assurent quotidiennement la mobilité urbaine de millions de personnes. Moins de <strong>3 %</strong> d'entre eux bénéficient d'une couverture d'assurance. Cette lacune n'est pas un problème de volonté — c'est un problème d'accès, de prix et d'infrastructure.</p>
+
+      <p><strong>Xtra Assurance</strong> est la première plateforme d'assurance mototaxi 100 % mobile d'Haïti. Elle offre deux plans tarifaires clairs, un processus de réclamation numérique basé sur l'analyse des preuves, et un paiement direct via MonCash.</p>
+
+      <div class="exec-grid">
+        <div class="exec-card">
+          <div class="exec-card-value">800K+</div>
+          <div class="exec-card-label">Opérateurs mototaxi<br>marché adressable</div>
+        </div>
+        <div class="exec-card">
+          <div class="exec-card-value">&lt; 3 %</div>
+          <div class="exec-card-label">Taux de couverture<br>assurance actuel</div>
+        </div>
+        <div class="exec-card">
+          <div class="exec-card-value">9,6 Mrd</div>
+          <div class="exec-card-label">HTG marché annuel<br>adressable (SAM)</div>
+        </div>
+      </div>
+
+      <ul class="kv-list">
+        <li>Plans <strong>1 000 HTG/mois</strong> (RC Pro) et <strong>2 500 HTG/mois</strong> (RC Premium)</li>
+        <li>Réclamations soumises avec preuves (photos, vidéos, documents) — <strong>analysées avant tout paiement</strong></li>
+        <li>Paiement des sinistres directement sur le numéro <strong>MonCash</strong> du conducteur</li>
+        <li>Alertes GPS en temps réel sur les zones à risque élevé</li>
+        <li>Programme de parrainage : <strong>50 HTG</strong> par conducteur référé et activé</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 01 MARKET ── -->
+    <div class="section" id="s1">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">Analyse du Marché</h2>
+      </div>
+
+      <h3>1.1 Le Mototaxi : Infrastructure de Transport Primaire</h3>
+      <p>Le mototaxi n'est pas un secteur informel marginal. En l'absence de transports publics fiables, de taxis réglementés à grande échelle ou d'un réseau ferroviaire, il est devenu le mode de déplacement par défaut pour des millions de citoyens haïtiens.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Indicateur</th><th>Estimation</th></tr></thead>
+          <tbody>
+            <tr><td>Opérateurs de mototaxi actifs</td><td><strong>800 000+</strong></td></tr>
+            <tr><td>Courses journalières estimées</td><td>4 – 6 millions</td></tr>
+            <tr><td>Part modale dans l'urbain</td><td>~65 % des déplacements motorisés</td></tr>
+            <tr><td>Taux de couverture assurance actuel</td><td><strong>&lt; 3 %</strong></td></tr>
+            <tr><td>Marché annuel adressable (SAM)</td><td>~9,6 milliards HTG</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>1.2 Les Cinq Barrières Structurelles</h3>
+
+      <div class="risk-grid">
+        <div class="risk-row">
+          <div class="risk-threat">① Absence mobile</div>
+          <div class="risk-mitigation">Les assureurs opèrent exclusivement via agences physiques. Pour un conducteur dont le revenu dépend de chaque heure de travail, le déplacement en agence est un coût prohibitif.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">② Prix inadaptés</div>
+          <div class="risk-mitigation">Les primes annuelles des assureurs conventionnels dépassent souvent ce qu'un conducteur gagne en un mois. Aucune offre mensuelle accessible n'existait.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">③ Réclamations opaques</div>
+          <div class="risk-mitigation">Sinistres traités sur dossier papier avec des délais de plusieurs semaines, sans traçabilité pour le conducteur.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">④ Rails de paiement</div>
+          <div class="risk-mitigation">Sans compte bancaire, impossible de payer une prime ou de recevoir un remboursement. MonCash n'était accepté par aucun assureur.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">⑤ Barrière linguistique</div>
+          <div class="risk-mitigation">Les contrats sont rédigés en français juridique, incompréhensible pour une majorité de conducteurs créolophones.</div>
+        </div>
+      </div>
+
+      <h3>1.3 Le Moment MonCash</h3>
+      <p>L'infrastructure de paiement mobile haïtienne a atteint une masse critique. MonCash (Digicel) dépasse les <strong>3 millions d'utilisateurs actifs</strong> et traite quotidiennement des millions de transactions. Cette plateforme a résolu le problème du dernier kilomètre financier pour la population non-bancarisée. Xtra Assurance se greffe sur cette infrastructure pour livrer un produit financier qui n'aurait pas été viable il y a cinq ans.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 02 SOLUTION ── -->
+    <div class="section" id="s2">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">La Solution</h2>
+      </div>
+
+      <h3>2.1 Plans d'Assurance</h3>
+
+      <div class="plan-grid">
+        <div class="plan-card">
+          <div class="plan-header">
+            <div class="plan-name">RC Pro</div>
+            <div class="plan-price">1 000 HTG <span>/ mois</span></div>
+          </div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Responsabilité civile tiers</li>
+            <li><span class="check">✓</span> Frais médicaux d'urgence</li>
+            <li><span class="check">✓</span> Dommages matériels</li>
+            <li><span class="check">✓</span> Alertes GPS zones à risque</li>
+            <li><span class="check">✓</span> Paiement MonCash sinistres approuvés</li>
+            <li><span class="check">✓</span> Bonus parrainage 50 HTG/référé</li>
+            <li><span class="cross">–</span> Gestion multi-moto</li>
+            <li><span class="cross">–</span> Support prioritaire 24h</li>
+          </ul>
+        </div>
+        <div class="plan-card">
+          <div class="plan-header">
+            <div class="plan-name">RC Premium</div>
+            <div class="plan-price">2 500 HTG <span>/ mois</span></div>
+          </div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Responsabilité civile tiers</li>
+            <li><span class="check">✓</span> Frais médicaux d'urgence</li>
+            <li><span class="check">✓</span> Dommages matériels</li>
+            <li><span class="check">✓</span> Alertes GPS + prédiction AI 48h</li>
+            <li><span class="check">✓</span> Paiement MonCash sinistres approuvés</li>
+            <li><span class="check">✓</span> Bonus parrainage 50 HTG/référé</li>
+            <li><span class="check">✓</span> Gestion flotte multi-moto</li>
+            <li><span class="check">✓</span> Support prioritaire 24h</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>2.2 Processus de Réclamation — Fondé sur la Preuve</h3>
+
+      <div class="highlight">
+        <strong>Principe fondamental :</strong> toute réclamation est analysée par l'équipe Xtra avant tout décaissement. Il n'existe pas de validation automatique — chaque dossier est examiné sur la base des preuves fournies par le conducteur.
+      </div>
+
+      <div class="process-box">
+        <div class="process-title">Parcours de Réclamation</div>
+        <div class="process-steps">
+          <div class="process-step">
+            <div class="process-step-line">
+              <div class="process-dot">1</div>
+              <div class="process-connector"></div>
+            </div>
+            <div class="process-body">
+              <div class="process-step-title">Soumission des Preuves</div>
+              <p class="process-step-text">Le conducteur ouvre l'app → Reklamasyon. Soumet <strong>photo(s), vidéo(s), document(s)</strong> de l'incident. Saisit le montant, la description et le numéro MonCash de réception.</p>
+            </div>
+          </div>
+          <div class="process-step">
+            <div class="process-step-line">
+              <div class="process-dot">2</div>
+              <div class="process-connector"></div>
+            </div>
+            <div class="process-body">
+              <div class="process-step-title">Analyse par l'Équipe Xtra</div>
+              <p class="process-step-text">L'agent Xtra vérifie : <strong>cohérence des preuves</strong>, couverture active à la date de l'incident, historique du conducteur, conformité du montant. Statut visible en temps réel dans l'app : <strong>Anba Revizyon 🔍</strong></p>
+            </div>
+          </div>
+          <div class="process-step">
+            <div class="process-step-line">
+              <div class="process-dot">3</div>
+            </div>
+            <div class="process-body">
+              <div class="process-step-title">Décision et Paiement</div>
+              <p class="process-step-text"><strong>✅ Approuvée</strong> → Paiement MonCash direct sur le numéro saisi + référence de transaction.<br><strong>❌ Refusée</strong> → Notification avec motif + possibilité de recours et complément de dossier.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>2.3 Programme de Parrainage</h3>
+      <p>Chaque conducteur reçoit un <strong>code de parrainage unique</strong> (ex. : <code style="font-family:var(--mono);background:var(--gold-dim);padding:2px 6px;border-radius:4px;font-size:12px;">JEAN50XT</code>). Lorsqu'un conducteur référé active une police, le parrain reçoit <strong>50 HTG</strong> dans son portefeuille Xtra, transférable sur MonCash. Coût d'acquisition parrainage : 50 HTG vs ~900 HTG par les canaux marketing classiques.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 03 TECH ── -->
+    <div class="section" id="s3">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">Architecture Technologique</h2>
+      </div>
+
+      <div class="stack">
+        <div class="stack-layer">
+          <div class="stack-layer-label">Couche Présentation</div>
+          <div class="stack-chips">
+            <span class="chip">React 18</span>
+            <span class="chip">Vite 5</span>
+            <span class="chip">React Router 6</span>
+            <span class="chip">PWA</span>
+            <span class="chip">react-helmet-async</span>
+            <span class="chip">CSS natif</span>
+            <span class="chip">Mode hors ligne</span>
+            <span class="chip">Bilingue HT/FR</span>
+          </div>
+        </div>
+        <div class="stack-layer">
+          <div class="stack-layer-label">Couche Applicative</div>
+          <div class="stack-chips">
+            <span class="chip">Django 4.2</span>
+            <span class="chip">Django REST Framework</span>
+            <span class="chip">Token Auth (DRF)</span>
+            <span class="chip">Gunicorn</span>
+            <span class="chip">Whitenoise</span>
+            <span class="chip">MonCash API</span>
+          </div>
+        </div>
+        <div class="stack-layer">
+          <div class="stack-layer-label">Couche Infrastructure</div>
+          <div class="stack-chips">
+            <span class="chip">GitHub Pages (frontend)</span>
+            <span class="chip">Render.com (backend)</span>
+            <span class="chip">PostgreSQL managé</span>
+            <span class="chip">GitHub Actions CI/CD</span>
+            <span class="chip">xtra-asirans.ht</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>Optimisation SEO / GEO / AEO</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Levier</th><th>Implémentation</th></tr></thead>
+          <tbody>
+            <tr><td>SEO on-page</td><td>Balises meta dynamiques par écran, canonical, hreflang ht/fr</td></tr>
+            <tr><td>Open Graph + Twitter Cards</td><td>Prévisualisation sociale enrichie</td></tr>
+            <tr><td>Données structurées JSON-LD</td><td>Organization, MobileApplication, FAQPage, Service, HowTo, WebPage</td></tr>
+            <tr><td>GEO — Moteurs AI</td><td>llms.txt à la racine (standard d'indexation génératif)</td></tr>
+            <tr><td>AEO — Recherche vocale</td><td>FAQPage + HowTo en créole, français et anglais</td></tr>
+            <tr><td>Géo-ciblage</td><td>geo.region: HT, coordonnées ICBM Port-au-Prince</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 04 BUSINESS MODEL ── -->
+    <div class="section" id="s4">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">Modèle Économique</h2>
+      </div>
+
+      <h3>4.1 Économie Unitaire</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Métrique</th><th>Valeur cible</th></tr></thead>
+          <tbody>
+            <tr><td>ARPU (mix Pro/Premium)</td><td><strong>~1 300 HTG/mois</strong></td></tr>
+            <tr><td>Ratio sinistres/primes cible</td><td>≤ 55 %</td></tr>
+            <tr><td>Coût acquisition — parrainage</td><td>50 HTG</td></tr>
+            <tr><td>Coût acquisition — marketing</td><td>~900 HTG</td></tr>
+            <tr><td>LTV estimée (rétention 18 mois)</td><td>~23 400 HTG</td></tr>
+            <tr><td>Ratio LTV/CAC (parrainage)</td><td><strong>~468×</strong></td></tr>
+            <tr><td>Seuil de rentabilité opérationnelle</td><td>~2 500 polices actives</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>4.2 Projections de Croissance</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Trimestre</th><th>Polices actives</th><th>Revenu mensuel</th><th>Ratio sinistres</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>T3 2026</td><td>500</td><td>650 000 HTG</td><td>70 %</td></tr>
+            <tr><td>T4 2026</td><td>1 500</td><td>1 950 000 HTG</td><td>63 %</td></tr>
+            <tr><td>T1 2027</td><td>3 000</td><td>3 900 000 HTG</td><td>58 %</td></tr>
+            <tr><td>T2 2027</td><td>6 000</td><td>7 800 000 HTG</td><td>54 %</td></tr>
+            <tr><td>T4 2027</td><td>12 000</td><td>15 600 000 HTG</td><td>50 %</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>4.3 Le Volant de Croissance</h3>
+
+      <div class="flywheel">
+        <div class="flywheel-node">
+          <div class="flywheel-node-icon">🏍️</div>
+          <div class="flywheel-node-text">Conducteur souscrit RC Pro ou Premium</div>
+        </div>
+        <div class="flywheel-arrow">→</div>
+        <div class="flywheel-node">
+          <div class="flywheel-node-icon">✅</div>
+          <div class="flywheel-node-text">Sinistre traité équitablement, paiement MonCash</div>
+        </div>
+        <div class="flywheel-arrow">→</div>
+        <div class="flywheel-node">
+          <div class="flywheel-node-icon">🎁</div>
+          <div class="flywheel-node-text">Parraine 3 amis → 150 HTG bonus · Pool s'élargit</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 05 RISK ── -->
+    <div class="section" id="s5">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">Gestion des Risques</h2>
+      </div>
+
+      <h3>5.1 Risque Sinistres — Contrôle par la Preuve</h3>
+
+      <div class="risk-grid">
+        <div class="risk-row">
+          <div class="risk-threat">Réclamations fictives</div>
+          <div class="risk-mitigation">Analyse obligatoire des preuves (photo/vidéo/document) avant tout paiement. Aucune validation automatique.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">Doublon MonCash</div>
+          <div class="risk-mitigation">Vérification d'unicité par réclamation. Un seul paiement par dossier approuvé.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">Fréquence anormale</div>
+          <div class="risk-mitigation">Score de risque conducteur, seuil d'alerte automatique, escalade vers validation senior.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">Preuves altérées</div>
+          <div class="risk-mitigation">Analyse des métadonnées EXIF, horodatage de soumission, cohérence temporelle incident/soumission.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">Risque réglementaire</div>
+          <div class="risk-mitigation">Phase 1 : partenariat assureur sous-jacent agréé CNA. Phase 2 (12–18 mois) : dossier licence directe CNA.</div>
+        </div>
+        <div class="risk-row">
+          <div class="risk-threat">Risque technologique</div>
+          <div class="risk-mitigation">Mode offline PWA, backup PostgreSQL quotidien, HTTPS obligatoire, aucune donnée financière côté client.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 06 COMPETITIVE ── -->
+    <div class="section" id="s6">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">Analyse Concurrentielle</h2>
+      </div>
+
+      <h3>Positionnement Marché</h3>
+
+      <div class="positioning">
+        <div class="pos-axis-h"></div>
+        <div class="pos-axis-v"></div>
+        <div class="pos-label top">DIGITAL</div>
+        <div class="pos-label bottom">PAPIER</div>
+        <div class="pos-label left">ACCESSIBLE</div>
+        <div class="pos-label right">ÉLEVÉ</div>
+
+        <!-- Xtra — digital + accessible -->
+        <div class="pos-dot" style="left:25%;top:22%">
+          <div class="pos-dot-circle" style="background:var(--gold);width:20px;height:20px;box-shadow:0 0 12px rgba(212,175,55,.6);"></div>
+          <div class="pos-dot-label" style="color:var(--gold-light);font-weight:800;font-size:11px;margin-top:4px;">Xtra Assurance<br><span style="color:rgba(255,255,255,.5);font-weight:400;">1 000–2 500 HTG</span></div>
+        </div>
+        <!-- Traditional — paper + expensive -->
+        <div class="pos-dot" style="left:72%;top:72%">
+          <div class="pos-dot-circle" style="background:var(--muted);width:14px;height:14px;"></div>
+          <div class="pos-dot-label" style="color:rgba(255,255,255,.55);font-size:10px;margin-top:4px;">Assureurs<br>Traditionnels</div>
+        </div>
+        <!-- Tontines — cash + accessible -->
+        <div class="pos-dot" style="left:22%;top:74%">
+          <div class="pos-dot-circle" style="background:#4a5878;width:12px;height:12px;"></div>
+          <div class="pos-dot-label" style="color:rgba(255,255,255,.45);font-size:10px;margin-top:4px;">Tontines<br>Informelles</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Critère</th><th>Xtra Assurance</th><th>Assureurs Trad.</th><th>Tontines</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Interface mobile native</td><td class="success">✅ PWA</td><td>❌ Aucune</td><td>❌ Aucune</td></tr>
+            <tr><td>Paiement MonCash</td><td class="success">✅ Natif</td><td>❌ Virement</td><td>✅ Cash</td></tr>
+            <tr><td>Prix mensuel</td><td class="success">✅ 1 000–2 500 HTG</td><td>❌ Élevé</td><td>✅ Variable</td></tr>
+            <tr><td>Analyse des preuves</td><td class="success">✅ Systématique</td><td>⚠️ Variable</td><td>❌ Absente</td></tr>
+            <tr><td>Traçabilité réclamations</td><td class="success">✅ Temps réel</td><td>❌ Aucune</td><td>❌ Aucune</td></tr>
+            <tr><td>Alertes GPS</td><td class="success">✅ Temps réel</td><td>❌ Aucune</td><td>❌ Aucune</td></tr>
+            <tr><td>Parrainage structuré</td><td class="success">✅ 50 HTG/référé</td><td>❌ Aucun</td><td>❌ Aucun</td></tr>
+            <tr><td>Couverture créole</td><td class="success">✅ Intégrale</td><td>❌ Français jur.</td><td>✅ Orale</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 07 ROADMAP ── -->
+    <div class="section" id="s7">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">Feuille de Route</h2>
+      </div>
+
+      <div class="roadmap">
+        <div class="roadmap-item">
+          <div class="roadmap-dot done">✓</div>
+          <div class="roadmap-body">
+            <div class="roadmap-phase">Phase 1 · T2–T3 2026</div>
+            <div class="roadmap-name">Fondation</div>
+            <ul class="roadmap-items">
+              <li>Application PWA déployée — GitHub Pages + Render</li>
+              <li>RC Pro (1 000 HTG) et RC Premium (2 500 HTG)</li>
+              <li>Processus de réclamation avec analyse des preuves</li>
+              <li>Paiement MonCash des sinistres approuvés</li>
+              <li>Programme de parrainage (50 HTG/référé)</li>
+              <li>Alertes GPS zones à risque + mode bilingue créole/français</li>
+              <li>Infrastructure SEO / GEO / AEO complète</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-dot active">⚙️</div>
+          <div class="roadmap-body">
+            <div class="roadmap-phase">Phase 2 · T4 2026 – T1 2027</div>
+            <div class="roadmap-name">Accélération</div>
+            <ul class="roadmap-items">
+              <li>Caméra native pour soumission de preuves directement depuis l'app</li>
+              <li>Push Notifications pour statuts de réclamation en temps réel</li>
+              <li>Bot WhatsApp pour soumission sans ouvrir l'app</li>
+              <li>Dashboard agent Xtra pour gestion et analyse des dossiers</li>
+              <li>Tarification dynamique par zone (AI)</li>
+              <li>Expansion : Cap-Haïtien, Gonaïves, Les Cayes</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-dot future">○</div>
+          <div class="roadmap-body">
+            <div class="roadmap-phase">Phase 3 · T2–T4 2027</div>
+            <div class="roadmap-name">Consolidation</div>
+            <ul class="roadmap-items">
+              <li>Dossier de licence directe CNA</li>
+              <li>Dashboard flotte pour opérateurs multi-motos</li>
+              <li>Micro-crédit pour financement de prime (MFI)</li>
+              <li>Assurance embarquée chez les concessionnaires moto</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-dot future">○</div>
+          <div class="roadmap-body">
+            <div class="roadmap-phase">Phase 4 · 2028</div>
+            <div class="roadmap-name">Expansion Régionale</div>
+            <ul class="roadmap-items">
+              <li>Corridor frontalier haïtiano-dominicain</li>
+              <li>Adaptation pour République Dominicaine et Jamaïque</li>
+              <li>Assurance vie accidentelle, couverture hospitalisation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 08 KPI ── -->
+    <div class="section" id="s8">
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2 class="section-title">Indicateurs Clés de Performance</h2>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Polices actives</div>
+          <div class="kpi-value">1 500</div>
+          <div class="kpi-sub">Cible T4 2026</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">ARPU</div>
+          <div class="kpi-value">1 300</div>
+          <div class="kpi-sub">HTG / mois</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Rétention M3</div>
+          <div class="kpi-value">≥ 70 %</div>
+          <div class="kpi-sub">Conducteurs actifs à 3 mois</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Ratio sinistres</div>
+          <div class="kpi-value">≤ 63 %</div>
+          <div class="kpi-sub">Cible T4 2026</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Délai traitement</div>
+          <div class="kpi-value">≤ 24h</div>
+          <div class="kpi-sub">Soumission → Décision</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Taux fraude</div>
+          <div class="kpi-value">≤ 2 %</div>
+          <div class="kpi-sub">Dossiers rejetés / total</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">NPS Conducteurs</div>
+          <div class="kpi-value">≥ 60</div>
+          <div class="kpi-sub">Score recommandation net</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Conv. parrainage</div>
+          <div class="kpi-value">≥ 40 %</div>
+          <div class="kpi-sub">Référés activant une police</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Uptime</div>
+          <div class="kpi-value">≥ 99,5 %</div>
+          <div class="kpi-sub">Disponibilité mensuelle</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 09 TEAM ── -->
+    <div class="section" id="s9">
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2 class="section-title">Équipe &amp; Gouvernance</h2>
+      </div>
+
+      <div class="highlight">
+        <strong>Philosophie de recrutement :</strong> La proximité avec l'utilisateur est une compétence technique. Les agents de traitement des sinistres sont des conducteurs de mototaxi reconvertis ou des membres de leur communauté — ils comprennent les conditions réelles d'un incident, parlent créole natif, et ont la confiance de leurs pairs.
+      </div>
+
+      <h3>Gouvernance des Réclamations</h3>
+      <ul class="kv-list">
+        <li>Tous les agents suivent un <strong>protocole d'analyse standardisé</strong></li>
+        <li>Les décisions de refus sont documentées et communicables au conducteur</li>
+        <li>Un <strong>mécanisme de recours</strong> est accessible depuis l'application</li>
+        <li>Double validation pour réclamations dépassant le seuil défini</li>
+        <li>Reporting mensuel interne : délais, taux d'approbation, motifs de refus</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── 10 CONCLUSION ── -->
+    <div class="section" id="s10">
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2 class="section-title">Conclusion</h2>
+      </div>
+
+      <p>L'absence d'assurance mototaxi en Haïti n'est pas une fatalité. C'est le résultat d'un marché mal servi par des acteurs qui n'ont jamais conçu leurs produits pour la réalité haïtienne.</p>
+
+      <p>Xtra Assurance inverse cette logique. Elle part des contraintes réelles — pas de banque, connectivité variable, langue créole, revenu journalier, paiement MonCash — et construit un produit financier rigoureux autour d'elles.</p>
+
+      <p>Le processus de réclamation basé sur l'analyse des preuves n'est pas une contrainte : c'est la garantie que chaque conducteur sera traité avec équité, que chaque paiement sera justifié, et que le système reste viable sur la durée.</p>
+
+      <div class="highlight" style="margin-top: 32px;">
+        <strong>Pour le conducteur :</strong> une protection réelle, transparente, accessible depuis son téléphone.<br><br>
+        <strong>Pour le marché :</strong> la démonstration que la technologie financière de classe mondiale n'a pas de frontières géographiques.
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════ FOOTER -->
+  <div class="footer">
+    <div class="footer-logo">🛡️ XTRA ASSURANCE</div>
+    <div class="footer-tagline">Dubai Quality · Ayiti Protection</div>
+    <div class="footer-bar"></div>
+    <div class="footer-meta">
+      contact@xtra-asirans.ht &nbsp;·&nbsp; xtra-asirans.ht<br>
+      Version 1.0 — Mai 2026 &nbsp;·&nbsp; Document Confidentiel
+    </div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
