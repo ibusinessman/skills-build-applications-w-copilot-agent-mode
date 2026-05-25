@@ -33,6 +33,14 @@ const envSchema = z.object({
   MIN_BET_STAKE: z.coerce.number().default(25),
   MAX_EXPOSURE_PER_MARKET: z.coerce.number().default(500000),
 
+  // External Odds API (the-odds-api.com)
+  ODDS_API_KEY: z.string().default(''),
+  ODDS_CACHE_TTL_SECONDS: z.coerce.number().default(60),
+  ODDS_STALE_TTL_SECONDS: z.coerce.number().default(600),
+  ODDS_API_TIMEOUT_MS: z.coerce.number().default(8000),
+  ODDS_SYNC_INTERVAL_MS: z.coerce.number().default(60000),
+  ODDS_DRIFT_THRESHOLD_PCT: z.coerce.number().default(12),
+
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
 });
 

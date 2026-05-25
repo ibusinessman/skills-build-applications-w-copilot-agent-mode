@@ -8,4 +8,6 @@ export const oddsRecalcQueue = new Queue('odds-recalc', { connection });
 export const notificationQueue = new Queue('notifications', { connection });
 export const liveQueue = new Queue('live-events', { connection });
 
+export { oddsSyncQueue } from './workers/odds-sync.worker';
+
 export const queues = [betSettlementQueue, oddsRecalcQueue, notificationQueue, liveQueue];

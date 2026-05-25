@@ -6,6 +6,7 @@ import { startBetSettlementWorker } from './jobs/workers/bet-settlement.worker';
 import { startOddsRecalcWorker } from './jobs/workers/odds-recalc.worker';
 import { startNotificationWorker } from './jobs/workers/notification.worker';
 import { startLiveWorker } from './jobs/workers/live.worker';
+import { startOddsSyncWorker, scheduleOddsSync } from './jobs/workers/odds-sync.worker';
 
 async function main() {
   // Connect to databases
@@ -20,7 +21,16 @@ async function main() {
   startOddsRecalcWorker();
   startNotificationWorker();
   startLiveWorker();
+  startOddsSyncWorker();
   console.log('[Workers] All workers started');
+
+  // Schedule external odds sync if API key is configured
+  if (env.ODDS_API_KEY) {
+    await scheduleOddsSync();
+    console.log('[OddsSync] Scheduled');
+  } else {
+    console.log('[OddsSync] Skipped — ODDS_API_KEY not set');
+  }
 
   // Build and start Fastify
   const app = await buildApp();
