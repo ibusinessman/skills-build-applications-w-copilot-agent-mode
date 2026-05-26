@@ -3,6 +3,7 @@ import { redis, KEYS } from '../../config/redis';
 import { env } from '../../config/env';
 import { calculatePotentialWin } from '../../utils/odds.utils';
 import { betSettlementQueue } from '../../jobs/queue';
+import { riskService } from '../risk/risk.service';
 
 interface BetSelection {
   marketId: string;
@@ -24,11 +25,18 @@ export class BetsService {
     const existing = await prisma.bet.findUnique({ where: { idempotencyKey } });
     if (existing) return existing;
 
-    // Validate stake limits
-    if (stake < env.MIN_BET_STAKE) throw new Error(`Minimum stake is ${env.MIN_BET_STAKE} HTG`);
-    if (stake > env.MAX_BET_STAKE) throw new Error(`Maximum stake is ${env.MAX_BET_STAKE} HTG`);
     if (selections.length < 1) throw new Error('At least one selection required');
     if (selections.length > 8) throw new Error('Maximum 8 selections per bet');
+
+    // Risk pre-validation (stake limits, daily limit, active bets, exposure, rate limit).
+    // potentialWin = stake is a conservative lower-bound estimate; the definitive
+    // exposure check runs again inside processBet with the real computed value.
+    await riskService.validateBet(
+      userId,
+      stake,
+      selections.map((s) => ({ ...s, oddsValue: 1 })),
+      stake,
+    );
 
     // Distributed lock to prevent double-bet
     const lockKey = KEYS.betSlipLock(userId);

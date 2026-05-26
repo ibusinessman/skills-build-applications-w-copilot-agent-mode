@@ -42,6 +42,12 @@ const envSchema = z.object({
   ODDS_DRIFT_THRESHOLD_PCT: z.coerce.number().default(12),
 
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  CASHOUT_MARGIN: z.coerce.number().default(0.05),
+  MAX_DAILY_STAKE_PER_USER: z.coerce.number().default(500000),
+  MAX_ACTIVE_BETS_PER_USER: z.coerce.number().default(20),
+  MAX_BET_RATE_PER_MINUTE: z.coerce.number().default(5),
 });
 
 const parsed = envSchema.safeParse(process.env);

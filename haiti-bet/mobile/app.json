@@ -1,0 +1,14 @@
+{
+  "name": "HaitiBet",
+  "displayName": "HaitiBet",
+  "version": "1.0.0",
+  "bundleId": "com.haitibet.mobile",
+  "android": {
+    "package": "com.haitibet.mobile",
+    "versionCode": 1
+  },
+  "ios": {
+    "bundleIdentifier": "com.haitibet.mobile",
+    "buildNumber": "1"
+  }
+}

@@ -16,6 +16,9 @@ import { liveRoutes } from './modules/live/live.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { externalOddsRoutes } from './modules/odds/external-odds.routes';
+import { riskRoutes } from './modules/risk/risk.routes';
+import { cashoutRoutes } from './modules/cashout/cashout.routes';
+import { promotionsRoutes } from './modules/promotions/promotions.routes';
 import { registerWsRoutes } from './websocket/ws.server';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -60,6 +63,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   fastify.register(adminRoutes, { prefix: '/api/admin' });
   fastify.register(notificationsRoutes, { prefix: '/api/notifications' });
   fastify.register(externalOddsRoutes, { prefix: '/api/odds' });
+  fastify.register(riskRoutes, { prefix: '/api/risk' });
+  fastify.register(cashoutRoutes, { prefix: '/api/cashout' });
+  fastify.register(promotionsRoutes, { prefix: '/api/promotions' });
 
   // WebSocket routes
   await registerWsRoutes(fastify);
