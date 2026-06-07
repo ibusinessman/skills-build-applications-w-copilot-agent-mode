@@ -790,7 +790,7 @@ class TicTacToe {
             if (this.timeLeft <= 8) this._play('tick');
             if (this.timeLeft <= 0) {
                 clearInterval(this.timerID);
-                if (this.curPlayer===this.mySymbol && this.active) this._myTimeout();
+                if ((this.hotseat || this.curPlayer===this.mySymbol) && this.active) this._myTimeout();
             }
         }, 1000);
     }
@@ -997,8 +997,8 @@ class TicTacToe {
 
     /* ── UI refresh ───────────────────────────────────── */
     _refreshNames() {
-        const xN = this.mySymbol==='X' ? this.myName : this.oppName;
-        const oN = this.mySymbol==='O' ? this.myName : this.oppName;
+        const xN = this.hotseat ? this.myName  : (this.mySymbol==='X' ? this.myName : this.oppName);
+        const oN = this.hotseat ? this.oppName : (this.mySymbol==='O' ? this.myName : this.oppName);
         this.$('nameX').textContent  = xN;
         this.$('nameO').textContent  = oN;
         this.$('badgeX').textContent = `✖ ${xN}`;
