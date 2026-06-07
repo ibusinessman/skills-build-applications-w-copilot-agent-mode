@@ -965,14 +965,18 @@ class TicTacToe {
         return total;
     }
 
-    /* Board static evaluation for minimax leaf nodes.
-       Positive = good for AI ('O'), negative = good for human ('X'). */
+    /* Static evaluation for minimax leaf nodes.
+       Offensive bias: AI (O) patterns weighted 1.3x, human patterns 1.0x.
+       This means the AI prefers building its own threats over pure blocking —
+       in Gomoku, aggressive fork creation wins more games than pure defense. */
     _boardEval() {
         const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
         let score = 0;
+        let aiOpen3 = 0, aiOpen4 = 0, huOpen3 = 0, huOpen4 = 0;
         for (const [key, player] of this.cells) {
             const [r, c] = key.split(',').map(Number);
-            const mult = player === 'O' ? 1 : -1.1;
+            const isAI = player === 'O';
+            const mult = isAI ? 1.3 : -1.0;
             for (const [dr, dc] of DIRS) {
                 if (this._get(r - dr, c - dc) === player) continue;
                 let len = 0;
@@ -982,14 +986,33 @@ class TicTacToe {
                 const f = (leftFree ? 1 : 0) + (rightFree ? 1 : 0);
                 let rs;
                 if      (len >= 5) rs = 2e6;
-                else if (len === 4) rs = f===2 ? 1e5 : f===1 ? 1e4 : 0;
-                else if (len === 3) rs = f===2 ? 1e4 : f===1 ? 1e3 : 0;
+                else if (len === 4) { rs = f===2 ? 1e5 : f===1 ? 1e4 : 0; if (f>=1) { isAI ? aiOpen4++ : huOpen4++; } }
+                else if (len === 3) { rs = f===2 ? 1e4 : f===1 ? 1e3 : 0; if (f===2) { isAI ? aiOpen3++ : huOpen3++; } }
                 else if (len === 2) rs = f===2 ? 1e3 : f===1 ? 1e2 : 0;
                 else                rs = f===2 ? 1e2 : f===1 ? 10  : 0;
                 score += mult * rs;
             }
         }
+        /* Fork bonus: two simultaneous threats create an unblockable position */
+        if (aiOpen3 >= 2) score += 6e4;
+        if (aiOpen4 >= 1 && aiOpen3 >= 1) score += 9e4;
+        if (huOpen3 >= 2) score -= 5e4;
+        if (huOpen4 >= 1 && huOpen3 >= 1) score -= 8e4;
         return score;
+    }
+
+    /* Returns a strong opening move near existing pieces, biased toward center. */
+    _openingMove() {
+        if (this.cells.size === 0) return [0, 0];
+        if (this.cells.size === 1) {
+            const [key] = this.cells.keys();
+            const [r, c] = key.split(',').map(Number);
+            const offsets = [[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+            for (const [dr, dc] of offsets) {
+                if (!this.cells.has(this._key(r+dr, c+dc))) return [r+dr, c+dc];
+            }
+        }
+        return null;
     }
 
     /* Top-N candidates sorted by quick heuristic for better alpha-beta pruning. */
@@ -998,7 +1021,7 @@ class TicTacToe {
         if (all.length <= n) return all;
         const ai = 'O', hu = 'X';
         return all
-            .map(([r, c]) => ({ r, c, s: this._aiScore(r, c, ai) * 1.2 + this._aiScore(r, c, hu) }))
+            .map(([r, c]) => ({ r, c, s: this._aiScore(r, c, ai) * 1.3 + this._aiScore(r, c, hu) }))
             .sort((a, b) => b.s - a.s)
             .slice(0, n)
             .map(({r, c}) => [r, c]);
@@ -1013,7 +1036,7 @@ class TicTacToe {
         }
         if (depth === 0) return this._boardEval();
         const player = isMax ? 'O' : 'X';
-        const cands  = this._aiCandidatesLimited(15);
+        const cands  = this._aiCandidatesLimited(18);
         if (!cands.length) return this._boardEval();
         if (isMax) {
             let best = -Infinity;
@@ -1040,22 +1063,90 @@ class TicTacToe {
         }
     }
 
+    /* Count open-N threats for a player on the current board. */
+    _countThreats(player, minLen, minFree) {
+        const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+        let count = 0;
+        for (const [key, p] of this.cells) {
+            if (p !== player) continue;
+            const [r, c] = key.split(',').map(Number);
+            for (const [dr, dc] of DIRS) {
+                if (this._get(r - dr, c - dc) === player) continue;
+                let len = 0;
+                while (this._get(r + dr*len, c + dc*len) === player) len++;
+                if (len < minLen) continue;
+                const f = (this._get(r - dr, c - dc) === null ? 1 : 0) +
+                          (this._get(r + dr*len, c + dc*len) === null ? 1 : 0);
+                if (f >= minFree) count++;
+            }
+        }
+        return count;
+    }
+
     _aiMove() {
-        const ai = 'O';
-        const depth = this.aiLevel === 'easy' ? 1 : this.aiLevel === 'medium' ? 3 : 5;
+        const ai = 'O', hu = 'X';
+        /* Actual search depth is +1 deeper than the label suggests —
+           the house always sees one move further than the player expects. */
+        const depth = this.aiLevel === 'easy' ? 2 : this.aiLevel === 'medium' ? 4 : 6;
         const delay = this.aiLevel === 'easy' ? 300+Math.random()*300 : 500+Math.random()*400;
         setTimeout(() => {
             if (!this.active || this.winner || this.curPlayer !== ai || !this.aiThinking) return;
+
+            /* Opening book: strong central placement on first AI move */
+            if (this.cells.size <= 1) {
+                const opening = this._openingMove();
+                if (opening) {
+                    this.aiThinking = false;
+                    this._applyMove(...opening, ai);
+                    return;
+                }
+            }
+
             const cands = this._aiCandidates();
             if (!cands.length) return;
-            let best = null, bestScore = -Infinity;
+
+            /* Phase 1: seize an immediate win */
             for (const [r, c] of cands) {
                 this._set(r, c, ai);
                 if (this._checkWin(r, c, ai)) {
                     this.cells.delete(this._key(r, c));
-                    best = [r, c]; bestScore = 1e9; break;
+                    this.aiThinking = false;
+                    this._applyMove(r, c, ai);
+                    return;
                 }
-                const noise = this.aiLevel === 'easy' ? (Math.random() - 0.5) * 2e4 : 0;
+                this.cells.delete(this._key(r, c));
+            }
+
+            /* Phase 2: block human's immediate win */
+            for (const [r, c] of cands) {
+                this._set(r, c, hu);
+                if (this._checkWin(r, c, hu)) {
+                    this.cells.delete(this._key(r, c));
+                    this.aiThinking = false;
+                    this._applyMove(r, c, ai);
+                    return;
+                }
+                this.cells.delete(this._key(r, c));
+            }
+
+            /* Phase 3: look for a fork-creating move (two open-3s or open-4+open-3) */
+            for (const [r, c] of cands) {
+                this._set(r, c, ai);
+                const t4 = this._countThreats(ai, 4, 1);
+                const t3 = this._countThreats(ai, 3, 2);
+                this.cells.delete(this._key(r, c));
+                if (t4 >= 2 || (t4 >= 1 && t3 >= 1) || t3 >= 2) {
+                    this.aiThinking = false;
+                    this._applyMove(r, c, ai);
+                    return;
+                }
+            }
+
+            /* Phase 4: minimax with alpha-beta for strategic depth */
+            let best = null, bestScore = -Infinity;
+            for (const [r, c] of cands) {
+                this._set(r, c, ai);
+                const noise = this.aiLevel === 'easy' ? (Math.random() - 0.5) * 1e4 : 0;
                 const s = this._minimax(depth - 1, -Infinity, Infinity, false, r, c, ai) + noise;
                 this.cells.delete(this._key(r, c));
                 if (s > bestScore) { bestScore = s; best = [r, c]; }
