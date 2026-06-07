@@ -81,6 +81,7 @@
         .btn:hover:not(:disabled){background:var(--primary-h);transform:translateY(-2px);box-shadow:0 4px 12px var(--shadow);}
         .btn:disabled{background:#aaa;cursor:not-allowed;transform:none;}
         .btn-orange{background:#FF9800;}  .btn-orange:hover:not(:disabled){background:#e65100;}
+        .btn-green {background:#43A047;}  .btn-green:hover:not(:disabled) {background:#2e7d32;}
         .btn-red   {background:#f44336;}  .btn-red:hover:not(:disabled)   {background:#c62828;}
         .btn-sm    {padding:5px 11px;font-size:12px;}
 
@@ -334,6 +335,18 @@
             <input type="text" id="friendId" placeholder="Collez l'ID de votre ami ici">
         </div>
         <button class="btn btn-orange" id="joinBtn">🔗 Rejoindre une partie</button>
+        <div class="or-sep">— OU JOUER EN LOCAL —</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+            <div style="flex:1">
+                <label class="name-lbl" for="hotNameX">Joueur X</label>
+                <input type="text" id="hotNameX" placeholder="Joueur X" maxlength="16" value="Joueur X">
+            </div>
+            <div style="flex:1">
+                <label class="name-lbl" for="hotNameO">Joueur O</label>
+                <input type="text" id="hotNameO" placeholder="Joueur O" maxlength="16" value="Joueur O">
+            </div>
+        </div>
+        <button class="btn btn-green" id="hotBtn">🏠 Jouer sur cet écran (2 joueurs)</button>
         <div class="err-box hidden" id="errBox"></div>
     </div>
 
@@ -341,7 +354,7 @@
     <div class="game-section" id="gameSection">
 
         <div style="margin-bottom:11px">
-            <span class="conn-pill"><span class="conn-dot"></span>Connecté en P2P</span>
+            <span class="conn-pill" id="connPill"><span class="conn-dot"></span><span id="connPillTxt">Connecté en P2P</span></span>
         </div>
 
         <!-- Score -->
@@ -462,6 +475,7 @@ class TicTacToe {
 
         /* ── Game state ──────────────────────────────────── */
         this.curPlayer = 'X';
+        this.hotseat   = false;
         this.mySymbol  = null;
         this.winner    = null;
         this.winIdx    = null;     // [[r,c], …] winning cells
@@ -639,8 +653,11 @@ class TicTacToe {
             });
             this._drawWinLine(win);
             this._addScore(player);
-            const iWon = player === this.mySymbol;
-            this._setStatus(iWon ? '🏆 Victoire !' : `😔 ${this.oppName} a gagné`, iWon ? 'victory' : 'defeat');
+            const winnerName = this.hotseat
+                ? (player==='X' ? this.myName : this.oppName)
+                : (player === this.mySymbol ? 'Vous' : this.oppName);
+            const iWon = this.hotseat ? true : player === this.mySymbol;
+            this._setStatus(`🏆 ${this.hotseat ? winnerName+' gagne' : (iWon ? 'Victoire !' : winnerName+' a gagné')} !`, iWon ? 'victory' : 'defeat');
             this._play(iWon ? 'win' : 'defeat');
             this._disableAll();
             this._refreshBadges();
@@ -656,6 +673,10 @@ class TicTacToe {
     /* ── Handle click ─────────────────────────────────── */
     _click(r,c) {
         if (!this.active || this._get(r,c) || this.winner) return;
+        if (this.hotseat) {
+            this._applyMove(r, c, this.curPlayer);
+            return;
+        }
         if (this.curPlayer !== this.mySymbol) { this._play('error'); return; }
         if (!this.conn?.open) { this._err('Connexion perdue'); return; }
         this._applyMove(r, c, this.mySymbol);
@@ -664,10 +685,11 @@ class TicTacToe {
 
     /* ── Ghost hover preview ──────────────────────────── */
     _ghostShow(r,c,sq) {
-        if (!this.active || this._get(r,c) || this.curPlayer!==this.mySymbol) return;
+        const sym = this.hotseat ? this.curPlayer : this.mySymbol;
+        if (!this.active || this._get(r,c) || (!this.hotseat && this.curPlayer!==this.mySymbol)) return;
         let g = sq.querySelector('.ghost');
-        if (!g) { g=document.createElement('span'); g.className=`ghost ${this.mySymbol.toLowerCase()}`; sq.appendChild(g); }
-        g.textContent = this.mySymbol;
+        if (!g) { g=document.createElement('span'); g.className=`ghost ${sym.toLowerCase()}`; sq.appendChild(g); }
+        g.textContent = sym;
         this.$('coordHint').textContent = `pos (${r}, ${c})`;
     }
     _ghostHide(sq) {
@@ -780,9 +802,14 @@ class TicTacToe {
         this.$('timerLbl').textContent = `${this.timeLeft}s`;
     }
     _myTimeout() {
-        this.active=false; this._send({type:'timeout',player:this.mySymbol});
-        this._stopTimer(); this._setStatus('⏰ Temps écoulé — défaite','defeat');
-        this._disableAll(); this._addScore(this.mySymbol==='X'?'O':'X');
+        const loser = this.hotseat ? this.curPlayer : this.mySymbol;
+        const winner = loser==='X' ? 'O' : 'X';
+        this.active=false;
+        if (!this.hotseat) this._send({type:'timeout',player:loser});
+        this._stopTimer();
+        const loserName = this.hotseat ? (loser==='X' ? this.myName : this.oppName) : 'Vous';
+        this._setStatus(`⏰ Temps écoulé — ${this.hotseat ? loserName+' perd' : 'défaite'} !`, 'defeat');
+        this._disableAll(); this._addScore(winner);
         this._play('defeat'); this._refreshRematch();
     }
     _oppTimeout() {
@@ -790,6 +817,16 @@ class TicTacToe {
         this._setStatus('⏰ Adversaire hors délai — victoire !','victory');
         this._disableAll(); this._addScore(this.mySymbol);
         this._play('win'); this._refreshRematch();
+    }
+
+    /* ── Hotseat (local 2-player) ────────────────────── */
+    _startHotseat() {
+        this.hotseat  = true;
+        this.mySymbol = null;
+        this.myName   = this.$('hotNameX').value.trim() || 'Joueur X';
+        this.oppName  = this.$('hotNameO').value.trim() || 'Joueur O';
+        this.$('hotBtn').disabled=true;
+        this._startGame();
     }
 
     /* ── PeerJS create ────────────────────────────────── */
@@ -898,6 +935,7 @@ class TicTacToe {
         this.score = {X:0,O:0,D:0};
         this.$('connPanel').classList.add('hidden');
         this.$('gameSection').classList.add('active');
+        this.$('connPillTxt').textContent = this.hotseat ? '🏠 Jeu local (2 joueurs)' : 'Connecté en P2P';
         this._doReset();
         this._refreshNames();
     }
@@ -929,6 +967,7 @@ class TicTacToe {
     /* ── Rematch voting ───────────────────────────────── */
     _voteRematch() {
         if (this.active && !this.winner) return;
+        if (this.hotseat) { this._doReset(); return; }
         if (this.myVote) return;
         this.myVote = true;
         this._send({type:'rematch_vote'});
@@ -966,9 +1005,15 @@ class TicTacToe {
     }
     _refreshTurn() {
         if (!this.active) return;
+        if (this.hotseat) {
+            const name = this.curPlayer==='X' ? this.myName : this.oppName;
+            this._setStatus(`🎯 Tour de ${name} (${this.curPlayer})`, 'your-turn');
+            this.sqMap.forEach(sq => { if (!sq.classList.contains('taken')) sq.classList.remove('no-click'); });
+            return;
+        }
         const mine = this.curPlayer === this.mySymbol;
         this._setStatus(mine ? '🎯 Votre tour !' : `⏳ Tour de ${this.oppName}…`, mine ? 'your-turn' : 'opp-turn');
-        this.sqMap.forEach((sq,key) => {
+        this.sqMap.forEach(sq => {
             if (!sq.classList.contains('taken'))
                 sq.classList.toggle('no-click', !mine);
         });
@@ -1053,7 +1098,7 @@ class TicTacToe {
         this._play('error');
         setTimeout(()=>e.classList.add('hidden'),5000);
     }
-    _enableBtns(){ this.$('createBtn').disabled=false; this.$('joinBtn').disabled=false; }
+    _enableBtns(){ this.$('createBtn').disabled=false; this.$('joinBtn').disabled=false; this.$('hotBtn').disabled=false; }
     _copyId(){
         const id=this.$('myIdDisplay').textContent;
         if(!id) return;
@@ -1069,6 +1114,7 @@ class TicTacToe {
         this._stopTimer(); this._stopPing();
         this.conn?.close(); this.peer?.destroy();
         this.conn=null; this.peer=null;
+        this.hotseat=false;
         this.$('connPanel').classList.remove('hidden');
         this.$('gameSection').classList.remove('active');
         this.$('myIdWrap').classList.add('hidden');
@@ -1091,6 +1137,7 @@ class TicTacToe {
         this.$('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter') this._sendChat(); });
         this.$('nameInput').addEventListener('input',  e=>{ this.myName=e.target.value.trim()||'Joueur'; });
         this.$('centerBtn').addEventListener('click',  ()=>this._scrollTo(this.lastR,this.lastC,true));
+        this.$('hotBtn')   .addEventListener('click',  ()=>this._startHotseat());
     }
 }
 
