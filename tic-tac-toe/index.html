@@ -385,9 +385,9 @@
         <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">
             <label class="name-lbl" style="margin:0">Difficulté :</label>
             <select id="aiLevel">
-                <option value="easy">😊 Facile</option>
-                <option value="medium" selected>🧠 Moyen</option>
-                <option value="hard">💀 Difficile</option>
+                <option value="easy">😊 Facile (1 coup)</option>
+                <option value="medium" selected>🧠 Moyen (3 coups)</option>
+                <option value="hard">💀 Difficile (5 coups)</option>
             </select>
         </div>
         <button class="btn btn-purple" id="aiBtn">🤖 Jouer contre l'IA</button>
@@ -965,25 +965,102 @@ class TicTacToe {
         return total;
     }
 
-    _aiMove() {
-        const ai = 'O', human = 'X';
-        const candidates = this._aiCandidates();
-        if (!candidates.length) return;
-        let best = null, bestScore = -1;
-        for (const [r, c] of candidates) {
-            const off = this._aiScore(r, c, ai);
-            const def = this._aiScore(r, c, human);
-            const score = this.aiLevel === 'easy'
-                ? Math.random()*100 + off*.1 + def*.05
-                : this.aiLevel === 'medium'
-                ? off*1.0 + def*1.1
-                : off*1.2 + def*1.0;
-            if (score > bestScore) { bestScore = score; best = [r, c]; }
+    /* Board static evaluation for minimax leaf nodes.
+       Positive = good for AI ('O'), negative = good for human ('X'). */
+    _boardEval() {
+        const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+        let score = 0;
+        for (const [key, player] of this.cells) {
+            const [r, c] = key.split(',').map(Number);
+            const mult = player === 'O' ? 1 : -1.1;
+            for (const [dr, dc] of DIRS) {
+                if (this._get(r - dr, c - dc) === player) continue;
+                let len = 0;
+                while (this._get(r + dr*len, c + dc*len) === player) len++;
+                const leftFree  = this._get(r - dr, c - dc) === null;
+                const rightFree = this._get(r + dr*len, c + dc*len) === null;
+                const f = (leftFree ? 1 : 0) + (rightFree ? 1 : 0);
+                let rs;
+                if      (len >= 5) rs = 2e6;
+                else if (len === 4) rs = f===2 ? 1e5 : f===1 ? 1e4 : 0;
+                else if (len === 3) rs = f===2 ? 1e4 : f===1 ? 1e3 : 0;
+                else if (len === 2) rs = f===2 ? 1e3 : f===1 ? 1e2 : 0;
+                else                rs = f===2 ? 1e2 : f===1 ? 10  : 0;
+                score += mult * rs;
+            }
         }
-        if (!best) return;
-        const delay = this.aiLevel === 'easy' ? 200+Math.random()*300 : 400+Math.random()*300;
+        return score;
+    }
+
+    /* Top-N candidates sorted by quick heuristic for better alpha-beta pruning. */
+    _aiCandidatesLimited(n) {
+        const all = this._aiCandidates();
+        if (all.length <= n) return all;
+        const ai = 'O', hu = 'X';
+        return all
+            .map(([r, c]) => ({ r, c, s: this._aiScore(r, c, ai) * 1.2 + this._aiScore(r, c, hu) }))
+            .sort((a, b) => b.s - a.s)
+            .slice(0, n)
+            .map(({r, c}) => [r, c]);
+    }
+
+    /* Minimax with alpha-beta pruning.
+       isMax=true means AI ('O') is choosing; isMax=false means human ('X').
+       lr,lc,lp = last placed row/col/player for win check. */
+    _minimax(depth, alpha, beta, isMax, lr, lc, lp) {
+        if (lr !== undefined && this._checkWin(lr, lc, lp)) {
+            return lp === 'O' ? (1e8 + depth * 1000) : -(1e8 + depth * 1000);
+        }
+        if (depth === 0) return this._boardEval();
+        const player = isMax ? 'O' : 'X';
+        const cands  = this._aiCandidatesLimited(15);
+        if (!cands.length) return this._boardEval();
+        if (isMax) {
+            let best = -Infinity;
+            for (const [r, c] of cands) {
+                this._set(r, c, player);
+                const s = this._minimax(depth - 1, alpha, beta, false, r, c, player);
+                this.cells.delete(this._key(r, c));
+                if (s > best) best = s;
+                if (s > alpha) alpha = s;
+                if (beta <= alpha) break;
+            }
+            return best;
+        } else {
+            let best = Infinity;
+            for (const [r, c] of cands) {
+                this._set(r, c, player);
+                const s = this._minimax(depth - 1, alpha, beta, true, r, c, player);
+                this.cells.delete(this._key(r, c));
+                if (s < best) best = s;
+                if (s < beta) beta = s;
+                if (beta <= alpha) break;
+            }
+            return best;
+        }
+    }
+
+    _aiMove() {
+        const ai = 'O';
+        const depth = this.aiLevel === 'easy' ? 1 : this.aiLevel === 'medium' ? 3 : 5;
+        const delay = this.aiLevel === 'easy' ? 300+Math.random()*300 : 500+Math.random()*400;
         setTimeout(() => {
-            if (this.active && !this.winner && this.curPlayer === ai && this.aiThinking) {
+            if (!this.active || this.winner || this.curPlayer !== ai || !this.aiThinking) return;
+            const cands = this._aiCandidates();
+            if (!cands.length) return;
+            let best = null, bestScore = -Infinity;
+            for (const [r, c] of cands) {
+                this._set(r, c, ai);
+                if (this._checkWin(r, c, ai)) {
+                    this.cells.delete(this._key(r, c));
+                    best = [r, c]; bestScore = 1e9; break;
+                }
+                const noise = this.aiLevel === 'easy' ? (Math.random() - 0.5) * 2e4 : 0;
+                const s = this._minimax(depth - 1, -Infinity, Infinity, false, r, c, ai) + noise;
+                this.cells.delete(this._key(r, c));
+                if (s > bestScore) { bestScore = s; best = [r, c]; }
+            }
+            if (best && this.active && !this.winner && this.aiThinking) {
                 this.aiThinking = false;
                 this._applyMove(...best, ai);
             }
