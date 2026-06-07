@@ -84,6 +84,7 @@
         .btn-orange{background:#FF9800;}  .btn-orange:hover:not(:disabled){background:#e65100;}
         .btn-green {background:#43A047;}  .btn-green:hover:not(:disabled) {background:#2e7d32;}
         .btn-red   {background:#f44336;}  .btn-red:hover:not(:disabled)   {background:#c62828;}
+        .btn-purple{background:#7E57C2;}  .btn-purple:hover:not(:disabled){background:#512DA8;}
         .btn-sm    {padding:5px 11px;font-size:12px;}
 
         /* ── Inputs ─────────────────────────────────────── */
@@ -241,6 +242,37 @@
         .sq.win{animation:glow .65s ease-in-out infinite alternate;}
         .sq.win.x{background:var(--cell-x-bg)!important;filter:brightness(1.3);}
         .sq.win.o{background:var(--cell-o-bg)!important;filter:brightness(1.3);}
+        .sq.last-move{box-shadow:0 0 0 3px #fff, 0 0 0 5px rgba(255,255,255,.4);z-index:3;}
+
+        /* ── AI thinking indicator ──────────────────────── */
+        .thinking-dots::after{
+            content:''; animation:dots 1.2s infinite;
+        }
+        @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+
+        /* ── Confetti win ───────────────────────────────── */
+        .confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;}
+        .confetti-wrap.off{display:none;}
+        .conf{
+            position:absolute;top:-12px;width:10px;height:10px;border-radius:2px;
+            animation:fall var(--dur) linear var(--del) forwards;
+        }
+        @keyframes fall{
+            0%  {transform:translateY(0) rotate(0);   opacity:1;}
+            85% {opacity:1;}
+            100%{transform:translateY(110vh) rotate(720deg); opacity:0;}
+        }
+
+        /* ── Move counter ───────────────────────────────── */
+        .move-ctr{font-size:11px;color:var(--muted);display:inline-block;min-width:60px;}
+
+        /* ── AI difficulty select ───────────────────────── */
+        select{
+            padding:6px 10px;font-size:13px;border:2px solid var(--border);
+            border-radius:8px;background:var(--card);color:var(--text);
+            cursor:pointer;transition:border-color .2s;
+        }
+        select:focus{outline:none;border-color:var(--primary);}
 
         /* ghost preview span inside a .sq */
         .sq .ghost{position:absolute;opacity:.22;pointer-events:none;font-size:22px;}
@@ -308,6 +340,7 @@
     </style>
 </head>
 <body>
+<div class="confetti-wrap off" id="confettiWrap"></div>
 <div class="container">
 
     <div class="header">
@@ -348,6 +381,16 @@
             </div>
         </div>
         <button class="btn btn-green" id="hotBtn">🏠 Jouer sur cet écran (2 joueurs)</button>
+        <div class="or-sep">— OU CONTRE L'IA —</div>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">
+            <label class="name-lbl" style="margin:0">Difficulté :</label>
+            <select id="aiLevel">
+                <option value="easy">😊 Facile</option>
+                <option value="medium" selected>🧠 Moyen</option>
+                <option value="hard">💀 Difficile</option>
+            </select>
+        </div>
+        <button class="btn btn-purple" id="aiBtn">🤖 Jouer contre l'IA</button>
         <div class="err-box hidden" id="errBox"></div>
     </div>
 
@@ -392,6 +435,9 @@
 
         <!-- Status -->
         <div class="status-banner" id="statusBanner">En attente…</div>
+        <div style="text-align:center;margin-bottom:6px;">
+            <span class="move-ctr" id="moveCtr"></span>
+        </div>
 
         <!-- Board navigation bar -->
         <div class="board-nav">
@@ -415,6 +461,7 @@
         <!-- Controls -->
         <div class="controls">
             <button class="btn" id="rematchBtn">🔄 Rejouer</button>
+            <button class="btn btn-orange hidden" id="undoBtn">↩ Annuler</button>
             <button class="btn btn-orange" id="chatBtn">💬 Chat</button>
             <button class="btn btn-red btn-sm" id="leaveBtn">🚪 Quitter</button>
             <button class="icon-btn" id="soundBtn" title="Sons">🔊</button>
@@ -477,6 +524,9 @@ class TicTacToe {
         /* ── Game state ──────────────────────────────────── */
         this.curPlayer = 'X';
         this.hotseat   = false;
+        this.aiMode    = false;
+        this.aiLevel   = 'medium';
+        this.aiThinking= false;
         this.mySymbol  = null;
         this.winner    = null;
         this.winIdx    = null;     // [[r,c], …] winning cells
@@ -494,6 +544,8 @@ class TicTacToe {
         this.lastPong  = 0;
         this.peer      = null;
         this.conn      = null;
+        this.history   = [];   // [{r,c,player}, …] for undo
+        this.moveCount = 0;
 
         /* ── DOM cache ───────────────────────────────────── */
         this._c = {};
@@ -583,6 +635,11 @@ class TicTacToe {
             sq.className = `sq taken ${val.toLowerCase()}`;
             /* Reapply win highlight */
             if (this.winIdx?.some(([wr,wc])=>wr===r&&wc===c)) sq.classList.add('win');
+            /* Reapply last-move highlight */
+            if (this.history.length > 0) {
+                const last = this.history[this.history.length-1];
+                if (last.r===r && last.c===c) sq.classList.add('last-move');
+            }
         } else {
             sq.className = `sq no-click`;
         }
@@ -629,17 +686,31 @@ class TicTacToe {
         this._set(r, c, player);
         this.lastR = r; this.lastC = c;
 
-        /* Expand board if near edge (rebuilds DOM) */
+        /* Remove last-move from previous cell */
+        if (this.history.length > 0) {
+            const prev = this.history[this.history.length-1];
+            this.sqMap.get(this._key(prev.r, prev.c))?.classList.remove('last-move');
+        }
+
+        /* Track move history + counter */
+        this.history.push({r, c, player});
+        this.moveCount++;
+        this._updateMoveCtr();
+
+        /* Expand board if near edge (rebuilds DOM, _makeCell re-applies last-move) */
         this._maybeExpand(r, c);
 
         /* Update cell appearance */
         const sq = this.sqMap.get(this._key(r,c));
         if (sq) {
             sq.textContent = player;
-            sq.className   = `sq taken ${player.toLowerCase()}`;
+            sq.className   = `sq taken ${player.toLowerCase()} last-move`;
         }
         this._play('place');
         this._scrollTo(r, c, true);
+
+        /* Show undo button in local modes */
+        if (this.hotseat || this.aiMode) this.$('undoBtn').classList.remove('hidden');
 
         /* Check win */
         const win = this._checkWin(r, c, player);
@@ -647,6 +718,7 @@ class TicTacToe {
             this.winner = player;
             this.winIdx = win;
             this.active = false;
+            this.aiThinking = false;
             this._stopTimer();
             win.forEach(([wr,wc]) => {
                 const ws = this.sqMap.get(this._key(wr,wc));
@@ -660,22 +732,38 @@ class TicTacToe {
             const iWon = this.hotseat ? true : player === this.mySymbol;
             this._setStatus(`🏆 ${this.hotseat ? winnerName+' gagne' : (iWon ? 'Victoire !' : winnerName+' a gagné')} !`, iWon ? 'victory' : 'defeat');
             this._play(iWon ? 'win' : 'defeat');
+            if (iWon) this._confetti();
             this._disableAll();
             this._refreshBadges();
             this._refreshRematch();
         } else {
             this.curPlayer = player === 'X' ? 'O' : 'X';
-            this._startTimer();
-            this._refreshTurn();
-            this._refreshBadges();
+            /* Trigger AI move when it's the AI's turn */
+            if (this.aiMode && this.curPlayer === 'O') {
+                this.aiThinking = true;
+                this._stopTimer();
+                this._refreshTurn();
+                this._refreshBadges();
+                this._aiMove();
+            } else {
+                this._startTimer();
+                this._refreshTurn();
+                this._refreshBadges();
+            }
         }
     }
 
     /* ── Handle click ─────────────────────────────────── */
     _click(r,c) {
         if (!this.active || this._get(r,c) || this.winner) return;
+        if (this.aiThinking) return;
         if (this.hotseat) {
             this._applyMove(r, c, this.curPlayer);
+            return;
+        }
+        if (this.aiMode) {
+            if (this.curPlayer !== 'X') return;
+            this._applyMove(r, c, 'X');
             return;
         }
         if (this.curPlayer !== this.mySymbol) { this._play('error'); return; }
@@ -830,6 +918,130 @@ class TicTacToe {
         this._startGame();
     }
 
+    /* ── AI mode ─────────────────────────────────────── */
+    _startAI() {
+        this.aiMode    = true;
+        this.hotseat   = false;
+        this.mySymbol  = 'X';
+        this.aiLevel   = this.$('aiLevel').value;
+        this.myName    = this.$('nameInput').value.trim() || 'Joueur';
+        this.oppName   = '🤖 IA';
+        this.$('aiBtn').disabled = true;
+        this._startGame();
+    }
+
+    _aiCandidates() {
+        if (this.cells.size === 0) return [[0, 0]];
+        const cands = new Map();
+        for (const key of this.cells.keys()) {
+            const [r, c] = key.split(',').map(Number);
+            for (let dr = -2; dr <= 2; dr++)
+                for (let dc = -2; dc <= 2; dc++) {
+                    if (dr===0 && dc===0) continue;
+                    const nk = `${r+dr},${c+dc}`;
+                    if (!this.cells.has(nk)) cands.set(nk, [r+dr, c+dc]);
+                }
+        }
+        return [...cands.values()];
+    }
+
+    _aiScore(r, c, player) {
+        const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+        let total = 0;
+        for (const [dr, dc] of DIRS) {
+            let count = 1, freeEnds = 0;
+            let d = 1;
+            while (d <= 4 && this._get(r+dr*d, c+dc*d) === player) { count++; d++; }
+            if (this._get(r+dr*d, c+dc*d) === null) freeEnds++;
+            d = 1;
+            while (d <= 4 && this._get(r-dr*d, c-dc*d) === player) { count++; d++; }
+            if (this._get(r-dr*d, c-dc*d) === null) freeEnds++;
+            if      (count >= 5) total += 1e6;
+            else if (count === 4) total += freeEnds===2 ? 1e5 : freeEnds===1 ? 1e4 : 0;
+            else if (count === 3) total += freeEnds===2 ? 1e4 : freeEnds===1 ? 1e3 : 0;
+            else if (count === 2) total += freeEnds===2 ? 1e3 : freeEnds===1 ? 1e2 : 0;
+            else                  total += freeEnds===2 ? 1e2 : freeEnds===1 ? 10  : 0;
+        }
+        return total;
+    }
+
+    _aiMove() {
+        const ai = 'O', human = 'X';
+        const candidates = this._aiCandidates();
+        if (!candidates.length) return;
+        let best = null, bestScore = -1;
+        for (const [r, c] of candidates) {
+            const off = this._aiScore(r, c, ai);
+            const def = this._aiScore(r, c, human);
+            const score = this.aiLevel === 'easy'
+                ? Math.random()*100 + off*.1 + def*.05
+                : this.aiLevel === 'medium'
+                ? off*1.0 + def*1.1
+                : off*1.2 + def*1.0;
+            if (score > bestScore) { bestScore = score; best = [r, c]; }
+        }
+        if (!best) return;
+        const delay = this.aiLevel === 'easy' ? 200+Math.random()*300 : 400+Math.random()*300;
+        setTimeout(() => {
+            if (this.active && !this.winner && this.curPlayer === ai && this.aiThinking) {
+                this.aiThinking = false;
+                this._applyMove(...best, ai);
+            }
+        }, delay);
+    }
+
+    /* ── Undo ─────────────────────────────────────────── */
+    _undo() {
+        if (!this.history.length || (!this.hotseat && !this.aiMode)) return;
+        const movesToUndo = (this.aiMode && this.history.length >= 2) ? 2 : 1;
+        for (let i = 0; i < movesToUndo; i++) {
+            if (!this.history.length) break;
+            const {r, c} = this.history.pop();
+            this.cells.delete(this._key(r, c));
+            const sq = this.sqMap.get(this._key(r, c));
+            if (sq) { sq.textContent = ''; sq.className = 'sq no-click'; }
+            this.moveCount--;
+        }
+        /* Update last-move highlight */
+        this.sqMap.forEach(sq => sq.classList.remove('last-move'));
+        if (this.history.length) {
+            const last = this.history[this.history.length-1];
+            this.sqMap.get(this._key(last.r, last.c))?.classList.add('last-move');
+        }
+        this.winner     = null;
+        this.winIdx     = null;
+        this.active     = true;
+        this.aiThinking = false;
+        this.curPlayer  = this.history.length % 2 === 0 ? 'X' : 'O';
+        this._hideWinLine();
+        this.$('rematchBar').classList.add('hidden');
+        this._updateMoveCtr();
+        if (this.moveCount <= 0) this.$('undoBtn').classList.add('hidden');
+        this._startTimer();
+        this._refreshTurn();
+        this._refreshBadges();
+    }
+
+    /* ── Confetti ─────────────────────────────────────── */
+    _confetti() {
+        const wrap = this.$('confettiWrap');
+        wrap.innerHTML = '';
+        wrap.classList.remove('off');
+        const colors = ['#f44336','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FFEB3B'];
+        for (let i = 0; i < 80; i++) {
+            const c = document.createElement('div');
+            c.className = 'conf';
+            c.style.cssText = `left:${Math.random()*100}%;background:${colors[i%colors.length]};--dur:${1.5+Math.random()*2}s;--del:${Math.random()*1.5}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'}`;
+            wrap.appendChild(c);
+        }
+        setTimeout(() => wrap.classList.add('off'), 4000);
+    }
+
+    /* ── Move counter ─────────────────────────────────── */
+    _updateMoveCtr() {
+        this.$('moveCtr').textContent = this.moveCount > 0 ? `Coup ${this.moveCount}` : '';
+    }
+
     /* ── PeerJS create ────────────────────────────────── */
     _create() {
         this.myName = this.$('nameInput').value.trim() || 'Joueur 1';
@@ -936,7 +1148,9 @@ class TicTacToe {
         this.score = {X:0,O:0,D:0};
         this.$('connPanel').classList.add('hidden');
         this.$('gameSection').classList.add('active');
-        this.$('connPillTxt').textContent = this.hotseat ? '🏠 Jeu local (2 joueurs)' : 'Connecté en P2P';
+        this.$('connPillTxt').textContent = this.hotseat ? '🏠 Jeu local (2 joueurs)'
+                                          : this.aiMode  ? '🤖 Contre l\'IA'
+                                          : 'Connecté en P2P';
         this._doReset();
         this._refreshNames();
     }
@@ -945,17 +1159,22 @@ class TicTacToe {
         this.cells     = new Map();
         this.B = { minR:-this.INIT_HALF, maxR:this.INIT_HALF,
                    minC:-this.INIT_HALF, maxC:this.INIT_HALF };
-        this.lastR = this.lastC = 0;
+        this.lastR     = this.lastC = 0;
         this.curPlayer = 'X';
         this.winner    = null;
         this.winIdx    = null;
         this.active    = true;
         this.myVote    = false;
         this.oppVote   = false;
+        this.history   = [];
+        this.moveCount = 0;
+        this.aiThinking = false;
 
         this._renderBoard();
         this._hideWinLine();
         this.$('rematchBar').classList.add('hidden');
+        this.$('undoBtn').classList.add('hidden');
+        this._updateMoveCtr();
 
         /* Center viewport on (0,0) after a paint tick */
         requestAnimationFrame(() => this._scrollTo(0, 0, false));
@@ -968,7 +1187,7 @@ class TicTacToe {
     /* ── Rematch voting ───────────────────────────────── */
     _voteRematch() {
         if (this.active && !this.winner) return;
-        if (this.hotseat) { this._doReset(); return; }
+        if (this.hotseat || this.aiMode) { this._doReset(); return; }
         if (this.myVote) return;
         this.myVote = true;
         this._send({type:'rematch_vote'});
@@ -1010,6 +1229,11 @@ class TicTacToe {
             const name = this.curPlayer==='X' ? this.myName : this.oppName;
             this._setStatus(`🎯 Tour de ${name} (${this.curPlayer})`, 'your-turn');
             this.sqMap.forEach(sq => { if (!sq.classList.contains('taken')) sq.classList.remove('no-click'); });
+            return;
+        }
+        if (this.aiMode && this.aiThinking) {
+            this._setStatus('⏳ IA réfléchit...', 'opp-turn');
+            this.sqMap.forEach(sq => { if (!sq.classList.contains('taken')) sq.classList.add('no-click'); });
             return;
         }
         const mine = this.curPlayer === this.mySymbol;
@@ -1116,11 +1340,14 @@ class TicTacToe {
         this.conn?.close(); this.peer?.destroy();
         this.conn=null; this.peer=null;
         this.hotseat=false;
+        this.aiMode=false;
+        this.aiThinking=false;
         this.$('connPanel').classList.remove('hidden');
         this.$('gameSection').classList.remove('active');
         this.$('myIdWrap').classList.add('hidden');
         this.$('friendId').value='';
         this._enableBtns();
+        this.$('aiBtn').disabled=false;
         this.active=false;
     }
 
@@ -1139,6 +1366,8 @@ class TicTacToe {
         this.$('nameInput').addEventListener('input',  e=>{ this.myName=e.target.value.trim()||'Joueur'; });
         this.$('centerBtn').addEventListener('click',  ()=>this._scrollTo(this.lastR,this.lastC,true));
         this.$('hotBtn')   .addEventListener('click',  ()=>this._startHotseat());
+        this.$('aiBtn')    .addEventListener('click',  ()=>this._startAI());
+        this.$('undoBtn')  .addEventListener('click',  ()=>this._undo());
     }
 }
 
