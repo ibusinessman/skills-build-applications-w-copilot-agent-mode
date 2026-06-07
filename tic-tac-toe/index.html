@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpion 5x5 - 2 Joueurs</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 550px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .connection-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .connection-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 8px 4px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #FF9800;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #F57C00;
+        }
+
+        .input-group {
+            margin: 12px 0;
+        }
+
+        .input-group input {
+            padding: 10px 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .my-id-display {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976D2;
+            word-break: break-all;
+        }
+
+        .status {
+            font-size: 20px;
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .game-section {
+            display: none;
+        }
+
+        .game-section.active {
+            display: block;
+        }
+
+        .connection-section.hidden {
+            display: none;
+        }
+
+        .players {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .player {
+            padding: 10px 18px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .player.x {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .player.o {
+            background: #FF5722;
+            color: white;
+        }
+
+        .player.active {
+            box-shadow: 0 0 15px rgba(255,255,255,0.7);
+            transform: scale(1.08);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 65px);
+            gap: 6px;
+            margin: 0 auto 20px;
+            padding: 8px;
+            background: #333;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .square {
+            width: 65px;
+            height: 65px;
+            background: white;
+            border: none;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .square:hover:not(.taken):not(.disabled) {
+            background: #f0f0f0;
+            transform: scale(1.08);
+        }
+
+        .square.taken {
+            cursor: default;
+        }
+
+        .square.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .square.x {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .square.o {
+            background: #FF5722;
+            color: white;
+        }
+
+        .status.game-status {
+            font-size: 22px;
+            padding: 14px;
+        }
+
+        .status.game-status.winner {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status.game-status.draw {
+            background: #FF9800;
+            color: white;
+        }
+
+        .status.game-status.your-turn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .status.game-status.opponent-turn {
+            background: #9C27B0;
+            color: white;
+        }
+
+        .rules {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .rules h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .rules ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .rules li {
+            padding: 6px 0;
+            font-size: 13px;
+            color: #555;
+            position: relative;
+            padding-left: 22px;
+        }
+
+        .rules li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .info-box {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 14px;
+            color: #2e7d32;
+        }
+
+        .error-box {
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 14px;
+            color: #c62828;
+        }
+
+        @media (max-width: 500px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 28px;
+            }
+            .board {
+                grid-template-columns: repeat(5, 50px);
+                gap: 4px;
+            }
+            .square {
+                width: 50px;
+                height: 50px;
+                font-size: 32px;
+            }
+            .btn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Morpion 5x5</h1>
+        <p class="subtitle">Alignez 5 symboles pour gagner</p>
+
+        <div class="connection-section" id="connectionSection">
+            <h3>🔗 Connexion</h3>
+            <div class="info-box" id="infoBox">
+                Créez une partie et partagez l'ID avec un ami
+            </div>
+
+            <button class="btn" id="createBtn">➕ Créer une partie</button>
+
+            <div id="myIdContainer" style="display: none;">
+                <p style="margin: 12px 0; font-weight: bold;">Votre ID de jeu :</p>
+                <div class="my-id-display" id="myId"></div>
+                <p style="margin: 8px 0; font-size: 13px; color: #666;">
+                    Partagez cet ID avec votre adversaire
+                </p>
+                <button class="btn btn-secondary" id="copyBtn">📋 Copier l'ID</button>
+            </div>
+
+            <div style="margin: 15px 0;">
+                <p style="margin: 8px 0; font-weight: bold;">OU</p>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="friendIdInput" placeholder="Collez l'ID de votre ami ici">
+            </div>
+            <button class="btn btn-secondary" id="joinBtn">🔗 Rejoindre une partie</button>
+
+            <div class="error-box" id="errorBox" style="display: none;"></div>
+        </div>
+
+        <div class="game-section" id="gameSection">
+            <div class="status connected" id="connectionStatus">
+                🟢 Connecté au jeu
+            </div>
+
+            <div class="players">
+                <div class="player x" id="playerX">Joueur X</div>
+                <div class="player o" id="playerO">Joueur O</div>
+            </div>
+
+            <div class="status game-status" id="gameStatus">
+                En attente de l'adversaire...
+            </div>
+
+            <div class="board" id="board" role="grid"></div>
+
+            <button class="btn" id="resetBtn">🔄 Nouvelle partie</button>
+            <button class="btn btn-secondary" id="disconnectBtn">🚪 Quitter</button>
+
+            <div class="rules">
+                <h3>📋 Règles :</h3>
+                <ul>
+                    <li>X et O jouent à tour de rôle</li>
+                    <li>Alignez 5 symboles (ligne, colonne, diagonale)</li>
+                    <li>Coups synchronisés en temps réel</li>
+                    <li>Votre tour est indiqué en bleu</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TicTacToeGame {
+            constructor() {
+                this.boardSize = 5;        // plateau 5x5
+                this.totalCells = 25;
+                this.board = Array(this.totalCells).fill(null);
+                this.currentPlayer = 'X';
+                this.winner = null;
+                this.mySymbol = null;
+                this.conn = null;
+                this.peer = null;
+                this.myId = null;
+                this.gameActive = false;
+
+                // Éléments DOM
+                this.connectionSection = document.getElementById('connectionSection');
+                this.gameSection = document.getElementById('gameSection');
+                this.createBtn = document.getElementById('createBtn');
+                this.joinBtn = document.getElementById('joinBtn');
+                this.copyBtn = document.getElementById('copyBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.friendIdInput = document.getElementById('friendIdInput');
+                this.myIdDisplay = document.getElementById('myId');
+                this.myIdContainer = document.getElementById('myIdContainer');
+                this.infoBox = document.getElementById('infoBox');
+                this.errorBox = document.getElementById('errorBox');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.gameStatus = document.getElementById('gameStatus');
+                this.playerX = document.getElementById('playerX');
+                this.playerO = document.getElementById('playerO');
+                this.boardContainer = document.getElementById('board');
+
+                this.squares = [];
+                this.initBoardUI();
+                this.attachEventListeners();
+                this.updateActivePlayer();
+            }
+
+            initBoardUI() {
+                for (let i = 0; i < this.totalCells; i++) {
+                    const square = document.createElement('button');
+                    square.className = 'square';
+                    square.dataset.index = i;
+                    square.setAttribute('role', 'gridcell');
+                    square.setAttribute('aria-label', `Case ${i+1} vide`);
+                    square.addEventListener('click', () => this.handleClick(i));
+                    this.boardContainer.appendChild(square);
+                    this.squares.push(square);
+                }
+            }
+
+            attachEventListeners() {
+                this.createBtn.addEventListener('click', () => this.createGame());
+                this.joinBtn.addEventListener('click', () => this.joinGame());
+                this.copyBtn.addEventListener('click', () => this.copyId());
+                this.resetBtn.addEventListener('click', () => this.resetGame());
+                this.disconnectBtn.addEventListener('click', () => this.disconnect());
+            }
+
+            // ---- Gestion de la connexion PeerJS ----
+
+            createGame() {
+                this.createBtn.disabled = true;
+                this.joinBtn.disabled = true;
+                this.showInfo('Création de la partie...');
+                this.initPeerAsHost();
+            }
+
+            joinGame() {
+                const friendId = this.friendIdInput.value.trim();
+                if (!friendId) {
+                    this.showError('Veuillez entrer l\'ID de votre ami');
+                    return;
+                }
+                this.joinBtn.disabled = true;
+                this.createBtn.disabled = true;
+                this.peer = new Peer(null, { debug: 0 });
+                this.peer.on('open', (id) => {
+                    this.connectToHost(friendId);
+                });
+                this.peer.on('error', (err) => {
+                    this.showError('Erreur PeerJS : ' + err.type);
+                    this.enableConnectionButtons();
+                });
+            }
+
+            initPeerAsHost() {
+                this.peer = new Peer(null, { debug: 0 });
+                this.peer.on('open', (id) => {
+                    this.myId = id;
+                    this.myIdDisplay.textContent = id;
+                    this.myIdContainer.style.display = 'block';
+                    this.showInfo('✅ ID généré ! Partagez-le avec votre ami');
+                });
+                this.peer.on('connection', (connection) => {
+                    this.conn = connection;
+                    this.setupConnectionAsHost();
+                });
+                this.peer.on('error', (err) => {
+                    this.showError('Erreur PeerJS : ' + err.type);
+                    this.enableConnectionButtons();
+                });
+            }
+
+            connectToHost(hostId) {
+                this.conn = this.peer.connect(hostId);
+                this.mySymbol = 'O';
+                this.setupConnectionAsJoiner();
+            }
+
+            setupConnectionAsHost() {
+                this.mySymbol = 'X';
+                this.conn.on('data', (data) => this.handleData(data));
+                this.conn.on('close', () => this.onOpponentDisconnect());
+                this.startGameAfterConnection();
+                this.sendInitToOpponent();
+            }
+
+            setupConnectionAsJoiner() {
+                this.conn.on('open', () => {
+                    this.conn.on('data', (data) => this.handleData(data));
+                    this.conn.on('close', () => this.onOpponentDisconnect());
+                });
+            }
+
+            sendInitToOpponent() {
+                if (this.conn && this.conn.open) {
+                    this.conn.send({ type: 'init', symbol: 'O' });
+                }
+            }
+
+            startGameAfterConnection() {
+                this.gameActive = true;
+                this.showGameSection();
+                this.resetBoardState();
+                this.updateUIForTurn();
+            }
+
+            // ---- Traitement des messages réseau ----
+
+            handleData(data) {
+                switch(data.type) {
+                    case 'init':
+                        this.mySymbol = data.symbol;
+                        this.gameActive = true;
+                        this.showGameSection();
+                        this.resetBoardState();
+                        this.updateUIForTurn();
+                        this.showInfo('✅ Connexion établie ! Vous jouez les O');
+                        break;
+                    case 'move':
+                        this.applyOpponentMove(data.index, data.player);
+                        break;
+                    case 'reset':
+                        this.resetBoardState();
+                        this.updateUIForTurn();
+                        break;
+                }
+            }
+
+            applyOpponentMove(index, player) {
+                if (!this.gameActive || this.board[index] || this.winner) return;
+                if (player !== this.mySymbol) {
+                    this.applyMove(index, player);
+                }
+            }
+
+            applyMove(index, player) {
+                this.board[index] = player;
+                this.squares[index].textContent = player;
+                this.squares[index].classList.add('taken', player.toLowerCase());
+                this.squares[index].setAttribute('aria-label', `Case ${index+1} occupée par ${player}`);
+
+                const gameWinner = this.checkWinner();
+                if (gameWinner) {
+                    this.winner = gameWinner;
+                    this.gameActive = false;
+                    this.updateStatusOnGameEnd();
+                    this.disableAllSquares();
+                } else if (this.checkDraw()) {
+                    this.winner = 'Draw';
+                    this.gameActive = false;
+                    this.updateStatusOnGameEnd();
+                } else {
+                    this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+                    this.updateUIForTurn();
+                }
+            }
+
+            // Vérifie 5 alignés (lignes, colonnes, 2 diagonales)
+            checkWinner() {
+                const size = this.boardSize;
+                // Vérifie les lignes
+                for (let row = 0; row < size; row++) {
+                    const start = row * size;
+                    if (this.board[start] &&
+                        this.board[start] === this.board[start+1] &&
+                        this.board[start] === this.board[start+2] &&
+                        this.board[start] === this.board[start+3] &&
+                        this.board[start] === this.board[start+4]) {
+                        return this.board[start];
+                    }
+                }
+                // Vérifie les colonnes
+                for (let col = 0; col < size; col++) {
+                    if (this.board[col] &&
+                        this.board[col] === this.board[col + size] &&
+                        this.board[col] === this.board[col + 2*size] &&
+                        this.board[col] === this.board[col + 3*size] &&
+                        this.board[col] === this.board[col + 4*size]) {
+                        return this.board[col];
+                    }
+                }
+                // Diagonale principale (0,6,12,18,24)
+                const diag1 = [0, 6, 12, 18, 24];
+                if (this.board[0] &&
+                    this.board[0] === this.board[6] &&
+                    this.board[0] === this.board[12] &&
+                    this.board[0] === this.board[18] &&
+                    this.board[0] === this.board[24]) {
+                    return this.board[0];
+                }
+                // Diagonale secondaire (4,8,12,16,20)
+                const diag2 = [4, 8, 12, 16, 20];
+                if (this.board[4] &&
+                    this.board[4] === this.board[8] &&
+                    this.board[4] === this.board[12] &&
+                    this.board[4] === this.board[16] &&
+                    this.board[4] === this.board[20]) {
+                    return this.board[4];
+                }
+                return null;
+            }
+
+            checkDraw() {
+                return this.board.every(cell => cell !== null) && !this.checkWinner();
+            }
+
+            handleClick(index) {
+                if (!this.gameActive || this.board[index] || this.winner) return;
+                if (this.currentPlayer !== this.mySymbol) {
+                    this.showError("Ce n'est pas votre tour !");
+                    return;
+                }
+                if (!this.conn || !this.conn.open) {
+                    this.showError('Connexion perdue');
+                    return;
+                }
+                this.applyMove(index, this.mySymbol);
+                this.conn.send({ type: 'move', index: index, player: this.mySymbol });
+            }
+
+            resetBoardState() {
+                this.board = Array(this.totalCells).fill(null);
+                this.currentPlayer = 'X';
+                this.winner = null;
+                this.gameActive = true;
+                this.squares.forEach(sq => {
+                    sq.textContent = '';
+                    sq.classList.remove('taken', 'x', 'o', 'disabled');
+                    sq.setAttribute('aria-label', `Case ${parseInt(sq.dataset.index)+1} vide`);
+                });
+            }
+
+            resetGame() {
+                if (!this.conn || !this.conn.open) return;
+                this.conn.send({ type: 'reset' });
+                this.resetBoardState();
+                this.updateUIForTurn();
+            }
+
+            updateUIForTurn() {
+                this.updateActivePlayer();
+                if (!this.gameActive) return;
+
+                const isMyTurn = this.currentPlayer === this.mySymbol;
+                this.squares.forEach(sq => {
+                    if (isMyTurn) {
+                        sq.classList.remove('disabled');
+                    } else {
+                        sq.classList.add('disabled');
+                    }
+                });
+
+                if (isMyTurn) {
+                    this.gameStatus.textContent = 'Votre tour !';
+                    this.gameStatus.className = 'status game-status your-turn';
+                } else {
+                    this.gameStatus.textContent = 'Tour de l\'adversaire...';
+                    this.gameStatus.className = 'status game-status opponent-turn';
+                }
+            }
+
+            updateStatusOnGameEnd() {
+                if (this.winner === 'Draw') {
+                    this.gameStatus.textContent = '🎮 Match nul !';
+                    this.gameStatus.className = 'status game-status draw';
+                } else if (this.winner === this.mySymbol) {
+                    this.gameStatus.textContent = '🏆 Victoire ! Vous avez gagné';
+                    this.gameStatus.className = 'status game-status winner';
+                } else {
+                    this.gameStatus.textContent = '😔 Défaite ! Adversaire a gagné';
+                    this.gameStatus.className = 'status game-status winner';
+                }
+                this.playerX.classList.remove('active');
+                this.playerO.classList.remove('active');
+                this.disableAllSquares();
+            }
+
+            disableAllSquares() {
+                this.squares.forEach(sq => sq.classList.add('disabled'));
+            }
+
+            updateActivePlayer() {
+                if (!this.gameActive) {
+                    this.playerX.classList.remove('active');
+                    this.playerO.classList.remove('active');
+                    return;
+                }
+                if (this.currentPlayer === 'X') {
+                    this.playerX.classList.add('active');
+                    this.playerO.classList.remove('active');
+                } else {
+                    this.playerO.classList.add('active');
+                    this.playerX.classList.remove('active');
+                }
+            }
+
+            showGameSection() {
+                this.connectionSection.classList.add('hidden');
+                this.gameSection.classList.add('active');
+                this.connectionStatus.textContent = '🟢 Connecté au jeu';
+                this.connectionStatus.className = 'status connected';
+            }
+
+            showInfo(msg) {
+                this.infoBox.textContent = msg;
+                this.infoBox.style.display = 'block';
+            }
+
+            showError(msg) {
+                this.errorBox.textContent = msg;
+                this.errorBox.style.display = 'block';
+                setTimeout(() => this.errorBox.style.display = 'none', 5000);
+            }
+
+            enableConnectionButtons() {
+                this.createBtn.disabled = false;
+                this.joinBtn.disabled = false;
+            }
+
+            copyId() {
+                if (!this.myIdDisplay.textContent) return;
+                navigator.clipboard.writeText(this.myIdDisplay.textContent).then(() => {
+                    this.showInfo('✅ ID Copié ! Envoyez-le à votre ami');
+                });
+            }
+
+            onOpponentDisconnect() {
+                this.showError('Adversaire déconnecté');
+                this.gameActive = false;
+                this.disableAllSquares();
+            }
+
+            disconnect() {
+                if (this.conn) this.conn.close();
+                if (this.peer) this.peer.destroy();
+                this.connectionSection.classList.remove('hidden');
+                this.gameSection.classList.remove('active');
+                this.myIdContainer.style.display = 'none';
+                this.enableConnectionButtons();
+                this.gameActive = false;
+            }
+        }
+
+        new TicTacToeGame();
+    </script>
+</body>
+</html>
