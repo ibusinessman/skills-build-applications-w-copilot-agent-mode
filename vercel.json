@@ -1,0 +1,6 @@
+{
+  "outputDirectory": "tic-tac-toe",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}

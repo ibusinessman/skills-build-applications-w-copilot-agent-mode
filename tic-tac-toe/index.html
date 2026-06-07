@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Morpion ∞ – Multijoueur</title>
-    <script src="peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script>window.Peer || document.write('<script src="peerjs.min.js"><\/script>');</script>
     <style>
         /* ── CSS Variables ──────────────────────────────── */
         :root {
@@ -451,7 +452,7 @@ class TicTacToe {
         this.WIN        = 5;       // cells in a row to win
         this.TURN_SECS  = 30;
         this.PING_MS    = 3500;
-        this.PEER_CFG   = { debug:0, host:'127.0.0.1', port:9001, path:'/myapp' };
+        this.PEER_CFG   = {};  // public PeerJS cloud broker
 
         /* Board geometry */
         this.CS  = 44;  // cell size px
