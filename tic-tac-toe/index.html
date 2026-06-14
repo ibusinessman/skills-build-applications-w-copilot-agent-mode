@@ -148,13 +148,20 @@
         .badge.x{background:var(--x-col);color:#fff;}
         .badge.o{background:var(--o-col);color:#fff;}
         .badge.idle{background:var(--badge-idle);color:var(--muted);}
-        .badge.active{transform:scale(1.1);box-shadow:0 0 0 3px rgba(255,255,255,.55);}
+        .badge.active{transform:scale(1.1);animation:badge-pulse 1.4s ease-in-out infinite;}
+        @keyframes badge-pulse{0%,100%{box-shadow:0 0 0 3px rgba(255,255,255,.55)}60%{box-shadow:0 0 0 8px rgba(255,255,255,.15),0 0 18px rgba(255,255,255,.25)}}
 
         /* ── Timer ──────────────────────────────────────── */
         .timer-wrap{margin-bottom:9px;}
         .timer-track{height:5px;background:var(--timer-track);border-radius:3px;overflow:hidden;}
         .timer-fill{height:100%;background:var(--primary);border-radius:3px;transition:width 1s linear,background .3s;}
-        .timer-fill.warn{background:#FF9800;}  .timer-fill.urgent{background:#f44336;}
+        .timer-fill.warn{background:#FF9800;}
+        .timer-fill.urgent{
+            background:repeating-linear-gradient(90deg,#f44336 0,#f44336 10px,#c62828 10px,#c62828 20px);
+            background-size:20px 100%;
+            animation:stripe-move .4s linear infinite;
+        }
+        @keyframes stripe-move{to{background-position:20px 0}}
         .timer-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
 
         /* ── Status banner ──────────────────────────────── */
@@ -254,17 +261,18 @@
         .confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;}
         .confetti-wrap.off{display:none;}
         .conf{
-            position:absolute;top:-12px;width:10px;height:10px;border-radius:2px;
+            position:absolute;top:-20px;
             animation:fall var(--dur) linear var(--del) forwards;
         }
         @keyframes fall{
-            0%  {transform:translateY(0) rotate(0);   opacity:1;}
+            0%  {transform:translateY(0) rotate(0) scaleX(1);  opacity:1;}
+            50% {transform:translateY(55vh) rotate(360deg) scaleX(var(--flip,.6));opacity:1;}
             85% {opacity:1;}
-            100%{transform:translateY(110vh) rotate(720deg); opacity:0;}
+            100%{transform:translateY(115vh) rotate(var(--spin,720deg)); opacity:0;}
         }
 
         /* ── Move counter ───────────────────────────────── */
-        .move-ctr{font-size:11px;color:var(--muted);display:inline-block;min-width:60px;}
+        .move-ctr{font-size:12px;color:var(--muted);display:inline-block;padding:3px 12px;background:var(--card2);border-radius:20px;border:1px solid var(--border);transition:opacity .3s;}
 
         /* ── AI difficulty select ───────────────────────── */
         select{
@@ -275,7 +283,7 @@
         select:focus{outline:none;border-color:var(--primary);}
 
         /* ghost preview span inside a .sq */
-        .sq .ghost{position:absolute;opacity:.22;pointer-events:none;font-size:22px;}
+        .sq .ghost{position:absolute;opacity:.35;pointer-events:none;font-size:22px;transition:opacity .1s;}
         .sq .ghost.x{color:var(--x-col);}
         .sq .ghost.o{color:var(--o-col);}
 
@@ -288,12 +296,38 @@
             from{filter:brightness(1.1) drop-shadow(0 0 3px rgba(255,255,255,.4));}
             to  {filter:brightness(1.45) drop-shadow(0 0 9px rgba(255,255,255,.8));}
         }
+        @keyframes score-pop{0%,100%{transform:scale(1)}40%{transform:scale(1.65) rotate(-5deg)}75%{transform:scale(.92)}}
+        .score-num.pop{animation:score-pop .5s cubic-bezier(.3,1.5,.5,1);}
+        @keyframes cell-undo{0%{transform:scale(1);filter:brightness(1.8)}100%{transform:scale(.3);opacity:0}}
+        .sq.undo-out{animation:cell-undo .22s ease forwards;pointer-events:none;}
 
         /* ── Rematch notice ─────────────────────────────── */
         .rematch-bar{
-            background:#607D8B;color:#fff;
-            padding:8px 11px;border-radius:9px;
-            margin-bottom:9px;font-size:13px;
+            background:linear-gradient(135deg,#546E7A,#78909C);color:#fff;
+            padding:10px 14px;border-radius:11px;
+            margin-bottom:9px;font-size:13px;font-weight:bold;
+            box-shadow:0 2px 8px rgba(0,0,0,.2);
+        }
+
+        /* ── Toast notifications ─────────────────────────── */
+        .toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:10001;
+            display:flex;flex-direction:column;gap:8px;align-items:center;
+            width:min(440px,92vw);pointer-events:none;}
+        .toast{padding:11px 20px;border-radius:11px;font-size:14px;font-weight:bold;color:#fff;
+            box-shadow:0 4px 20px rgba(0,0,0,.45);pointer-events:auto;width:100%;text-align:center;
+            opacity:0;transform:translateY(-14px) scale(.95);
+            transition:opacity .25s,transform .25s cubic-bezier(.3,1.5,.5,1);}
+        .toast.show{opacity:1;transform:none;}
+        .toast.hide{opacity:0;transform:translateY(-8px) scale(.97);transition-timing-function:ease;}
+        .toast.info   {background:linear-gradient(135deg,#1976D2,#1565C0);}
+        .toast.success{background:linear-gradient(135deg,#388E3C,#1B5E20);}
+        .toast.error  {background:linear-gradient(135deg,#D32F2F,#b71c1c);}
+        .toast.warn   {background:linear-gradient(135deg,#F57C00,#E65100);}
+
+        /* ── Keyboard navigation cursor ─────────────────── */
+        .sq.key-cursor:not(.taken){
+            box-shadow:0 0 0 3px var(--primary),0 0 0 6px rgba(102,126,234,.35);
+            z-index:4;transform:scale(1.13);
         }
 
         /* ── Controls ───────────────────────────────────── */
@@ -341,6 +375,7 @@
 </head>
 <body>
 <div class="confetti-wrap off" id="confettiWrap"></div>
+<div class="toast-wrap" id="toastWrap"></div>
 <div class="container">
 
     <div class="header">
@@ -443,6 +478,7 @@
         <div class="board-nav">
             <button class="btn btn-sm" id="centerBtn">🎯 Recentrer</button>
             <span class="coord-hint" id="coordHint">pos (0, 0)</span>
+            <span class="coord-hint" title="Flèches: déplacer le curseur&#10;Entrée/Espace: jouer&#10;U: annuler" style="cursor:help;opacity:.7">⌨️ ?</span>
         </div>
 
         <!-- Infinite board -->
@@ -547,6 +583,11 @@ class TicTacToe {
         this.history   = [];   // [{r,c,player}, …] for undo
         this.moveCount = 0;
 
+        /* ── Keyboard navigation ─────────────────────────── */
+        this.keyNavActive = false;
+        this.cursor       = {r:0, c:0};
+        this._thinkID     = null;
+
         /* ── DOM cache ───────────────────────────────────── */
         this._c = {};
         this.$  = id => (this._c[id] ??= document.getElementById(id));
@@ -554,6 +595,7 @@ class TicTacToe {
         this._renderBoard();
         this._bindUI();
         this._initDrag();
+        this._initKeyboard();
     }
 
     /* ── Helpers ──────────────────────────────────────── */
@@ -1097,6 +1139,7 @@ class TicTacToe {
                 const opening = this._openingMove();
                 if (opening) {
                     this.aiThinking = false;
+                    this._stopThinking();
                     this._applyMove(...opening, ai);
                     return;
                 }
@@ -1110,7 +1153,7 @@ class TicTacToe {
                 this._set(r, c, ai);
                 if (this._checkWin(r, c, ai)) {
                     this.cells.delete(this._key(r, c));
-                    this.aiThinking = false;
+                    this.aiThinking = false; this._stopThinking();
                     this._applyMove(r, c, ai);
                     return;
                 }
@@ -1122,7 +1165,7 @@ class TicTacToe {
                 this._set(r, c, hu);
                 if (this._checkWin(r, c, hu)) {
                     this.cells.delete(this._key(r, c));
-                    this.aiThinking = false;
+                    this.aiThinking = false; this._stopThinking();
                     this._applyMove(r, c, ai);
                     return;
                 }
@@ -1136,7 +1179,7 @@ class TicTacToe {
                 const t3 = this._countThreats(ai, 3, 2);
                 this.cells.delete(this._key(r, c));
                 if (t4 >= 2 || (t4 >= 1 && t3 >= 1) || t3 >= 2) {
-                    this.aiThinking = false;
+                    this.aiThinking = false; this._stopThinking();
                     this._applyMove(r, c, ai);
                     return;
                 }
@@ -1153,6 +1196,7 @@ class TicTacToe {
             }
             if (best && this.active && !this.winner && this.aiThinking) {
                 this.aiThinking = false;
+                this._stopThinking();
                 this._applyMove(...best, ai);
             }
         }, delay);
@@ -1167,9 +1211,13 @@ class TicTacToe {
             const {r, c} = this.history.pop();
             this.cells.delete(this._key(r, c));
             const sq = this.sqMap.get(this._key(r, c));
-            if (sq) { sq.textContent = ''; sq.className = 'sq no-click'; }
+            if (sq) {
+                sq.classList.add('undo-out');
+                setTimeout(() => { sq.textContent = ''; sq.className = 'sq no-click'; }, 200);
+            }
             this.moveCount--;
         }
+        this._play('undo');
         /* Update last-move highlight */
         this.sqMap.forEach(sq => sq.classList.remove('last-move'));
         if (this.history.length) {
@@ -1195,19 +1243,35 @@ class TicTacToe {
         const wrap = this.$('confettiWrap');
         wrap.innerHTML = '';
         wrap.classList.remove('off');
-        const colors = ['#f44336','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FFEB3B'];
-        for (let i = 0; i < 80; i++) {
-            const c = document.createElement('div');
-            c.className = 'conf';
-            c.style.cssText = `left:${Math.random()*100}%;background:${colors[i%colors.length]};--dur:${1.5+Math.random()*2}s;--del:${Math.random()*1.5}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'}`;
-            wrap.appendChild(c);
+        const colors = ['#f44336','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FFEB3B','#E91E63','#00E676','#FF6D00'];
+        for (let i = 0; i < 120; i++) {
+            const el = document.createElement('div');
+            el.className = 'conf';
+            const size  = 9 + Math.random() * 14;
+            const type  = Math.random();
+            const w     = type < 0.5 ? size : size * 0.35;
+            const h     = size;
+            const br    = type < 0.33 ? '50%' : type < 0.66 ? '2px' : '1px';
+            const spin  = (720 + Math.random()*720) * (Math.random()<.5?1:-1);
+            el.style.cssText = `left:${Math.random()*100}%;background:${colors[i%colors.length]};` +
+                `--dur:${2+Math.random()*2.5}s;--del:${Math.random()*2}s;` +
+                `--spin:${spin}deg;--flip:${Math.random()>.5?.4:.9};` +
+                `width:${w}px;height:${h}px;border-radius:${br}`;
+            wrap.appendChild(el);
         }
-        setTimeout(() => wrap.classList.add('off'), 4000);
+        setTimeout(() => wrap.classList.add('off'), 5500);
     }
 
     /* ── Move counter ─────────────────────────────────── */
     _updateMoveCtr() {
-        this.$('moveCtr').textContent = this.moveCount > 0 ? `Coup ${this.moveCount}` : '';
+        const el = this.$('moveCtr');
+        if (this.moveCount <= 0) { el.textContent = ''; return; }
+        if (this.aiMode) {
+            const you = Math.ceil(this.moveCount / 2), ai = Math.floor(this.moveCount / 2);
+            el.textContent = `Coup ${this.moveCount} · Vous ${you} · IA ${ai}`;
+        } else {
+            el.textContent = `Coup ${this.moveCount}`;
+        }
     }
 
     /* ── PeerJS create ────────────────────────────────── */
@@ -1338,6 +1402,8 @@ class TicTacToe {
         this.moveCount = 0;
         this.aiThinking = false;
 
+        this.keyNavActive = false;
+        this._stopThinking();
         this._renderBoard();
         this._hideWinLine();
         this.$('rematchBar').classList.add('hidden');
@@ -1380,6 +1446,9 @@ class TicTacToe {
         this.$('scoreX').textContent = this.score.X;
         this.$('scoreO').textContent = this.score.O;
         this.$('scoreD').textContent = this.score.D;
+        const numEl = who==='X' ? this.$('scoreX') : who==='O' ? this.$('scoreO') : this.$('scoreD');
+        numEl.classList.remove('pop');
+        requestAnimationFrame(() => numEl.classList.add('pop'));
     }
 
     /* ── UI refresh ───────────────────────────────────── */
@@ -1400,10 +1469,11 @@ class TicTacToe {
             return;
         }
         if (this.aiMode && this.aiThinking) {
-            this._setStatus('⏳ IA réfléchit...', 'opp-turn');
+            this._startThinking();
             this.sqMap.forEach(sq => { if (!sq.classList.contains('taken')) sq.classList.add('no-click'); });
             return;
         }
+        this._stopThinking();
         const mine = this.curPlayer === this.mySymbol;
         this._setStatus(mine ? '🎯 Votre tour !' : `⏳ Tour de ${this.oppName}…`, mine ? 'your-turn' : 'opp-turn');
         this.sqMap.forEach(sq => {
@@ -1417,10 +1487,10 @@ class TicTacToe {
         x.classList.toggle('active', this.curPlayer==='X');
         o.classList.toggle('active', this.curPlayer==='O');
     }
-    _setStatus(msg,cls) {
+    _setStatus(msg, cls, html=false) {
         const el = this.$('statusBanner');
-        el.textContent = msg;
-        el.className   = `status-banner${cls?' '+cls:''}`;
+        if (html) el.innerHTML = msg; else el.textContent = msg;
+        el.className = `status-banner${cls?' '+cls:''}`;
     }
     _disableAll() {
         this.sqMap.forEach(sq => { if (!sq.classList.contains('taken')) sq.classList.add('no-click'); });
@@ -1432,20 +1502,25 @@ class TicTacToe {
         if (!this.soundOn) return;
         try {
             const ctx=this._ctx(), t=ctx.currentTime;
-            const note=(f,start,dur,vol=.2,wave='sine')=>{
+            const note=(f,start,dur,vol=.18,wave='sine')=>{
                 const o=ctx.createOscillator(),g=ctx.createGain();
                 o.type=wave; o.frequency.value=f;
                 g.gain.setValueAtTime(vol,t+start);
                 g.gain.exponentialRampToValueAtTime(.001,t+start+dur);
                 o.connect(g); g.connect(ctx.destination);
-                o.start(t+start); o.stop(t+start+dur+.01);
+                o.start(t+start); o.stop(t+start+dur+.05);
             };
-            if(type==='place')  { note(520,0,.1); note(700,.06,.09,.12); }
-            if(type==='win')    { [523,659,784,1047].forEach((f,i)=>note(f,i*.13,.28,.22,'triangle')); }
-            if(type==='defeat') { note(320,0,.25); note(240,.2,.4,.18); }
-            if(type==='draw')   { note(350,0,.2); note(280,.18,.35,.18); }
-            if(type==='error')  { note(180,0,.15,.15,'square'); }
-            if(type==='tick')   { note(900,0,.06,.07); }
+            if(type==='place')  { note(440,0,.05,.14); note(554,.04,.07,.1); note(659,.08,.09,.07); }
+            if(type==='win')    {
+                [523,659,784,880,1047].forEach((f,i)=>note(f,i*.1,.22,.2,'triangle'));
+                note(1047,.55,.55,.18,'triangle'); note(880,.65,.4,.12,'triangle');
+            }
+            if(type==='defeat') { note(392,0,.18,.16); note(330,.14,.22,.14); note(262,.3,.45,.12); }
+            if(type==='draw')   { note(440,0,.15,.13); note(392,.12,.22,.12); note(350,.26,.3,.1); }
+            if(type==='error')  { note(200,0,.06,.12,'square'); note(160,.07,.09,.1,'square'); }
+            if(type==='tick')   { note(1100,0,.035,.05,'triangle'); }
+            if(type==='undo')   { note(500,0,.08,.14); note(380,.09,.12,.1); }
+            if(type==='chat')   { note(880,0,.055,.07); note(1100,.07,.05,.05); }
         } catch(_){}
     }
     _toggleSound() { this.soundOn=!this.soundOn; this.$('soundBtn').textContent=this.soundOn?'🔊':'🔇'; }
@@ -1479,23 +1554,40 @@ class TicTacToe {
             : `<span class="chat-who ${who}">${this._esc(name||(who==='me'?'Moi':this.oppName))}: </span>`;
         d.innerHTML = lbl+this._esc(msg);
         c.appendChild(d); c.scrollTop=c.scrollHeight;
-        if (who==='opp'&&this.$('chatPanel').classList.contains('hidden'))
+        if (who==='opp'&&this.$('chatPanel').classList.contains('hidden')) {
             this.$('chatBtn').textContent='💬 Chat (!)';
+            this._play('chat');
+        }
     }
     _esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    /* ── Toast system ─────────────────────────────────── */
+    _toast(msg, type='info', dur=3800) {
+        const wrap = this.$('toastWrap');
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.textContent = msg;
+        wrap.appendChild(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+        setTimeout(() => {
+            t.classList.add('hide');
+            setTimeout(() => t.remove(), 350);
+        }, dur);
+    }
 
     /* ── Info / Error ─────────────────────────────────── */
     _info(msg){ const e=this.$('infoBox'); e.textContent=msg; e.classList.remove('hidden'); }
     _err(msg) {
+        this._toast(msg, 'error', 5000);
         const e=this.$('errBox'); e.textContent=msg; e.classList.remove('hidden');
         this._play('error');
-        setTimeout(()=>e.classList.add('hidden'),5000);
+        setTimeout(()=>e.classList.add('hidden'), 5000);
     }
     _enableBtns(){ this.$('createBtn').disabled=false; this.$('joinBtn').disabled=false; this.$('hotBtn').disabled=false; }
     _copyId(){
         const id=this.$('myIdDisplay').textContent;
         if(!id) return;
-        navigator.clipboard.writeText(id).then(()=>this._info('✅ ID copié !'));
+        navigator.clipboard.writeText(id).then(()=>{ this._info('✅ ID copié !'); this._toast('✅ ID copié dans le presse-papiers !','success',2500); });
     }
 
     /* ── Leave / disconnect ───────────────────────────── */
@@ -1517,6 +1609,60 @@ class TicTacToe {
         this._enableBtns();
         this.$('aiBtn').disabled=false;
         this.active=false;
+    }
+
+    /* ── AI thinking animated dots ───────────────────── */
+    _startThinking() {
+        clearInterval(this._thinkID);
+        let n = 0;
+        const banner = this.$('statusBanner');
+        const update = () => {
+            n = (n + 1) % 4;
+            banner.textContent = '🤖 IA réfléchit' + '.'.repeat(n);
+            banner.className = 'status-banner opp-turn';
+        };
+        update();
+        this._thinkID = setInterval(update, 380);
+    }
+    _stopThinking() {
+        clearInterval(this._thinkID);
+        this._thinkID = null;
+    }
+
+    /* ── Keyboard navigation ──────────────────────────── */
+    _initKeyboard() {
+        document.addEventListener('keydown', e => {
+            /* Ignore when typing in inputs */
+            if (e.target.tagName === 'INPUT') return;
+
+            const arrows = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+            if (arrows.includes(e.key)) {
+                e.preventDefault();
+                if (!this.active || this.winner || this.aiThinking) return;
+                if (!this.keyNavActive) {
+                    this.keyNavActive = true;
+                    this.cursor = {r: this.lastR, c: this.lastC};
+                }
+                const dr = e.key==='ArrowUp' ? -1 : e.key==='ArrowDown' ? 1 : 0;
+                const dc = e.key==='ArrowLeft' ? -1 : e.key==='ArrowRight' ? 1 : 0;
+                this._moveCursor(this.cursor.r + dr, this.cursor.c + dc);
+            } else if ((e.key==='Enter'||e.key===' ') && this.keyNavActive) {
+                e.preventDefault();
+                this._click(this.cursor.r, this.cursor.c);
+            } else if ((e.key==='u'||e.key==='U') && !e.ctrlKey && !e.metaKey) {
+                if (this.hotseat || this.aiMode) this._undo();
+            }
+        });
+    }
+    _moveCursor(r, c) {
+        this.sqMap.get(this._key(this.cursor.r, this.cursor.c))?.classList.remove('key-cursor');
+        this.cursor = {r, c};
+        const sq = this.sqMap.get(this._key(r, c));
+        if (sq) {
+            sq.classList.add('key-cursor');
+            this._scrollTo(r, c, true);
+        }
+        this.$('coordHint').textContent = `pos (${r}, ${c})`;
     }
 
     /* ── Bind all UI events ───────────────────────────── */
