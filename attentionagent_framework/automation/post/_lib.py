@@ -69,14 +69,25 @@ def ok(**kw):
     sys.exit(0)
 
 
-def _do(req):
-    try:
-        with urllib.request.urlopen(req) as r:
-            return getattr(r, "status", r.getcode()), r.headers, r.read()
-    except urllib.error.HTTPError as e:
-        return e.code, e.headers, e.read()
-    except urllib.error.URLError as e:
-        fail("network error: %s" % e)
+_TIMEOUT = 60  # seconds per request
+
+def _do(req, _retries=3):
+    """Send a request. Retries up to _retries times on 429 (respects Retry-After)."""
+    for attempt in range(_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+                return getattr(r, "status", r.getcode()), r.headers, r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < _retries:
+                wait = int(e.headers.get("Retry-After", 60))
+                time.sleep(min(wait, 300))  # cap at 5 min
+                continue
+            return e.code, e.headers, e.read()
+        except urllib.error.URLError as e:
+            if attempt < _retries:
+                time.sleep(2 ** attempt)
+                continue
+            fail("network error: %s" % e)
 
 
 def _parse(body):

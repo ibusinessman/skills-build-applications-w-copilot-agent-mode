@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Post a video to TikTok (Content Posting API, direct post).
+"""Post to TikTok (Content Posting API) — video or text-only.
 
 Usage:
   python3 automation/post/tiktok.py --text "caption" --media https://cdn.you/clip.mp4
   python3 automation/post/tiktok.py --text "caption" --media ./clip.mp4
+  python3 automation/post/tiktok.py --text "text only post (max 300 chars)"
   python3 automation/post/tiktok.py --dry-run
 
 Env (.env): TIKTOK_ACCESS_TOKEN   (+ optional TIKTOK_PRIVACY_LEVEL, default SELF_ONLY)
 NOTE: until your TikTok app passes audit, posts are forced to SELF_ONLY (private).
 PULL_FROM_URL needs the host domain verified in your TikTok app. Docs:
 https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+https://developers.tiktok.com/doc/content-posting-api-reference-text-post
 """
 import os
 import sys
@@ -22,25 +24,64 @@ import _lib as L
 
 HOST = "https://open.tiktokapis.com"
 CREDS = ["TIKTOK_ACCESS_TOKEN"]
+MAX_TEXT_CHARS = 300
+
+
+def _poll(token, pub_id):
+    H = {"Authorization": "Bearer %s" % token,
+         "Content-Type": "application/json; charset=UTF-8"}
+    for _ in range(20):
+        st, _, s = L.http("POST", HOST + "/v2/post/publish/status/fetch/", H,
+                          json.dumps({"publish_id": pub_id}).encode())
+        status = (s.get("data") or {}).get("status")
+        if status == "PUBLISH_COMPLETE":
+            L.ok(platform="tiktok", publish_id=pub_id, status=status)
+            return
+        if status == "FAILED":
+            L.fail("TikTok publish failed", response=s)
+        time.sleep(5)
+    L.ok(platform="tiktok", publish_id=pub_id, status="PENDING")
 
 
 def main():
     L.load_env()
     a = L.parse_args(sys.argv[1:])
     if a["dry_run"]:
-        L.ok(dry_run=True, platform="tiktok", text=a["text"], media=a["media"], creds_present=L.present(CREDS))
+        L.ok(dry_run=True, platform="tiktok", text=a["text"], media=a["media"],
+             creds_present=L.present(CREDS))
 
-    if not a["media"]:
-        L.fail("TikTok needs --media (a public video URL or a local file)")
     token = L.env("TIKTOK_ACCESS_TOKEN")
-    H = {"Authorization": "Bearer %s" % token, "Content-Type": "application/json; charset=UTF-8"}
-    post_info = {"title": a["text"] or "",
-                 "privacy_level": os.environ.get("TIKTOK_PRIVACY_LEVEL", "SELF_ONLY"),
-                 "disable_duet": False, "disable_comment": False, "disable_stitch": False}
+    H = {"Authorization": "Bearer %s" % token,
+         "Content-Type": "application/json; charset=UTF-8"}
+    privacy = os.environ.get("TIKTOK_PRIVACY_LEVEL", "SELF_ONLY")
 
+    # --- Text-only post ---
+    if not a["media"]:
+        if not a["text"]:
+            L.fail("TikTok needs --text and/or --media")
+        text = (a["text"] or "")[:MAX_TEXT_CHARS]
+        body = {"post_info": {"title": text, "privacy_level": privacy,
+                              "disable_comment": False},
+                "source_info": {"source": "DIRECT_POST_TEXT"}}
+        st, _, j = L.http("POST", HOST + "/v2/post/publish/text/", H,
+                          json.dumps(body).encode())
+        if st >= 300:
+            L.fail("TikTok text post failed", status=st, response=j)
+        pub = (j.get("data") or {}).get("publish_id")
+        if not pub:
+            L.fail("TikTok returned no publish_id", response=j)
+        _poll(token, pub)
+        return
+
+    # --- Video post ---
+    post_info = {"title": (a["text"] or "")[:MAX_TEXT_CHARS],
+                 "privacy_level": privacy,
+                 "disable_duet": False, "disable_comment": False, "disable_stitch": False}
     init_url = HOST + "/v2/post/publish/video/init/"
+
     if L.is_url(a["media"]):
-        body = {"post_info": post_info, "source_info": {"source": "PULL_FROM_URL", "video_url": a["media"]}}
+        body = {"post_info": post_info,
+                "source_info": {"source": "PULL_FROM_URL", "video_url": a["media"]}}
         st, _, j = L.http("POST", init_url, H, json.dumps(body).encode())
         if st >= 300:
             L.fail("TikTok init (pull) failed", status=st, response=j)
@@ -65,18 +106,7 @@ def main():
     pub = (j.get("data") or {}).get("publish_id")
     if not pub:
         L.fail("TikTok returned no publish_id", response=j)
-
-    for _ in range(20):
-        st, _, s = L.http("POST", HOST + "/v2/post/publish/status/fetch/", H,
-                          json.dumps({"publish_id": pub}).encode())
-        status = (s.get("data") or {}).get("status")
-        if status == "PUBLISH_COMPLETE":
-            L.ok(platform="tiktok", publish_id=pub, status=status)
-            return
-        if status == "FAILED":
-            L.fail("TikTok publish failed", response=s)
-        time.sleep(5)
-    L.ok(platform="tiktok", publish_id=pub, status="PENDING")
+    _poll(token, pub)
 
 
 if __name__ == "__main__":

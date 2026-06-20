@@ -65,7 +65,7 @@ elif [ "${1:-}" = "meta-ads" ]; then
 else
   AREA="${1:-}"; SET="${2:-}"; SKILL="${3:-}"
   if [ -z "$AREA" ] || [ -z "$SET" ] || [ -z "$SKILL" ]; then
-    echo "$(stamp) ERROR usage: run.sh <area> <set> <skill> | meta-ads - <skill> | --study" >> "$LOG"; exit 1
+    echo "$(stamp) ERROR usage: run.sh <area> <set> <skill> | meta-ads - <skill> | analytics - <skill>" >> "$LOG"; exit 1
   fi
   SKILL_DIR="$REPO_ROOT/$AREA/skills/$SKILL"
   SET_DIR="$REPO_ROOT/$AREA/sets/$SET"

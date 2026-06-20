@@ -32,23 +32,26 @@ for f in agent.json automation/config.md automation/run.sh automation/install.sh
   [ -f "$REPO_ROOT/$f" ] && ok "$f" || fail "missing: $f"
 done
 
-for area in organic-short-form organic-text; do
+_check_schedule_skills() {
+  # $1=area (e.g. organic-short-form), $2=skills_subdir (e.g. skills)
+  area="$1"; skills_subdir="$2"
   sched="$REPO_ROOT/$area/schedule.md"
-  [ -f "$sched" ] && ok "$area/schedule.md" || fail "missing: $area/schedule.md"
-  # Validate every skill referenced in the schedule has a directory
+  [ -f "$sched" ] && ok "$area/schedule.md" || { fail "missing: $area/schedule.md"; return; }
   while IFS= read -r line; do
     stripped=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
     case "$stripped" in \|*) ;; *) continue ;; esac
-    # Skip separator rows like |---|---|---|
     case "$stripped" in *-*-*) continue ;; esac
-    # Extract third column (skill)
     skill=$(printf '%s' "$stripped" | awk -F'|' '{gsub(/ /,"",$4); print $4}')
-    # Skip header row and empty extractions
-    [ -z "$skill" ] || [ "$skill" = "skill" ] && continue
-    d="$REPO_ROOT/$area/skills/$skill"
-    [ -d "$d" ] && ok "$area/skills/$skill/" || fail "missing skill dir: $area/skills/$skill/"
+    [ -z "$skill" ] || [ "$skill" = "skill" ] || [ "$skill" = "-" ] && continue
+    d="$REPO_ROOT/$area/$skills_subdir/$skill"
+    [ -d "$d" ] && ok "$area/$skills_subdir/$skill/" || fail "missing skill dir: $area/$skills_subdir/$skill/"
   done < "$sched"
+}
+
+for area in organic-short-form organic-text; do
+  _check_schedule_skills "$area" "skills"
 done
+_check_schedule_skills "analytics" "skills"
 
 # --- .env ---
 echo ""
