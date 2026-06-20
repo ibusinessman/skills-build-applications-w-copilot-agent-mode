@@ -5,5 +5,8 @@ Add or remove rows freely, then re-run `sh automation/install.sh` to update the 
 
 | time  | set   | skill   |
 |-------|-------|---------|
+| 07:30 | set-1 | skill-2 |
 | 10:00 | set-1 | skill-1 |
-| 16:00 | set-1 | skill-2 |
+| 12:30 | set-1 | skill-4 |
+| 16:00 | set-1 | skill-3 |
+| 19:30 | set-1 | skill-2 |

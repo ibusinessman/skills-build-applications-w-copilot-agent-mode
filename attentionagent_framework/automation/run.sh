@@ -75,6 +75,7 @@ while [ $attempt -le $MAX_RETRIES ]; do
   EXIT=$?
   if [ $EXIT -eq 0 ]; then
     echo "$(stamp) done: $TAG" >> "$LOG"
+    python3 "$REPO_ROOT/automation/notify/slack.py" --tag "$TAG" --status ok 2>/dev/null || true
     exit 0
   fi
   echo "$(stamp) FAILED: $TAG (exit $EXIT, attempt $attempt/$MAX_RETRIES)" >> "$LOG"
@@ -86,4 +87,5 @@ while [ $attempt -le $MAX_RETRIES ]; do
   attempt=$((attempt + 1))
 done
 echo "$(stamp) GIVING UP: $TAG after $MAX_RETRIES attempts" >> "$LOG"
+python3 "$REPO_ROOT/automation/notify/slack.py" --tag "$TAG" --status failed --detail "gave up after $MAX_RETRIES attempts" 2>/dev/null || true
 exit 1

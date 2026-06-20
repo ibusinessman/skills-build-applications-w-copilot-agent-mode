@@ -21,10 +21,12 @@ echo "=================================="
 echo ""
 echo "Structure"
 for f in agent.json automation/config.md automation/run.sh automation/install.sh \
-          automation/check.sh \
+          automation/check.sh automation/notify/slack.py \
+          automation/post/cdn_upload.py \
           company/brand.md company/product.md company/icp.md company/offers.md \
           analytics/sources.md analytics/winners.md \
           analytics/skills/self-study/SKILL.md \
+          analytics/skills/weekly-report/SKILL.md \
           meta-ads/rules.md meta-ads/ad-account.md \
           meta-ads/skills/promote-winners/SKILL.md; do
   [ -f "$REPO_ROOT/$f" ] && ok "$f" || fail "missing: $f"
@@ -97,6 +99,15 @@ PY
   _check "LinkedIn"     LINKEDIN_ACCESS_TOKEN LINKEDIN_AUTHOR_URN
   _check "YouTube"      YOUTUBE_CLIENT_ID YOUTUBE_CLIENT_SECRET YOUTUBE_REFRESH_TOKEN
   _check "TikTok"       TIKTOK_ACCESS_TOKEN
+  _check "Meta Ads"     META_ACCESS_TOKEN META_AD_ACCOUNT_ID
+  _check "CDN / S3"     S3_BUCKET S3_REGION S3_ACCESS_KEY S3_SECRET_KEY S3_PUBLIC_BASE_URL
+  # Slack is optional — warn only if the key name is present but empty
+  slack_url=$(eval "printf '%s' \"\${SLACK_WEBHOOK_URL:-}\"")
+  if [ -n "$slack_url" ]; then
+    ok "Slack webhook configured"
+  else
+    warn "Slack: SLACK_WEBHOOK_URL not set (optional — notifications disabled)"
+  fi
 fi
 
 # --- company/ brain filled in ---
@@ -147,6 +158,34 @@ print(','.join(missing))
     warn "no poster script for: $platform"
   fi
 done
+
+# CDN upload script
+cdn_script="$REPO_ROOT/automation/post/cdn_upload.py"
+if python3 -m py_compile "$cdn_script" 2>/dev/null; then
+  out=$(python3 "$cdn_script" --dry-run 2>&1)
+  if printf '%s' "$out" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') else 1)" 2>/dev/null; then
+    missing=$(printf '%s' "$out" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+creds=d.get('creds_present',{})
+missing=[k for k,v in creds.items() if not v]
+print(','.join(missing))
+" 2>/dev/null)
+    [ -n "$missing" ] \
+      && warn "cdn_upload.py: missing S3 credentials: $missing" \
+      || ok "cdn_upload.py: script ok, S3 creds present"
+  else
+    fail "cdn_upload.py --dry-run failed"
+  fi
+else
+  fail "cdn_upload.py has a syntax error"
+fi
+
+# Slack notify script
+notify_script="$REPO_ROOT/automation/notify/slack.py"
+python3 -m py_compile "$notify_script" 2>/dev/null \
+  && ok "notify/slack.py syntax ok" \
+  || fail "notify/slack.py has a syntax error"
 
 # --- loop config ---
 echo ""
