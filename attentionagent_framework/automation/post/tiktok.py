@@ -72,6 +72,7 @@ def main():
         status = (s.get("data") or {}).get("status")
         if status == "PUBLISH_COMPLETE":
             L.ok(platform="tiktok", publish_id=pub, status=status)
+            return
         if status == "FAILED":
             L.fail("TikTok publish failed", response=s)
         time.sleep(5)

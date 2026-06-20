@@ -86,7 +86,7 @@ def main():
     if a["media"]:
         if L.is_url(a["media"]):
             L.fail("LinkedIn poster uploads a local file — pass a path, not a URL")
-        if a["media"].lower().endswith((".mp4", ".mov")):
+        if L.is_video(a["media"]):
             urn = _upload_video(token, author, a["media"])
             post["content"] = {"media": {"title": a.get("title") or "video", "id": urn}}
         else:
