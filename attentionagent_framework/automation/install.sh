@@ -1,6 +1,7 @@
 #!/bin/sh
 # Turns every content area's schedule.md into real OS alarms — one alarm per row.
-# Reads: organic-short-form/schedule.md, organic-text/schedule.md, meta-ads/schedule.md
+# Reads: organic-short-form, organic-text, meta-ads, analytics schedule.md files.
+# Optional 4th column in schedule tables: days (crontab day-of-week: * 0-6 or Sun Mon …)
 #   sh automation/install.sh           install all alarms from the schedules
 #   sh automation/install.sh --remove  remove them all
 # macOS  -> launchd (~/Library/LaunchAgents)
@@ -8,7 +9,6 @@
 set -u
 
 PREFIX="com.aicmo"
-STUDY_TIME="${CMO_STUDY_TIME:-23:30}"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 RUN="$REPO_ROOT/automation/run.sh"
@@ -57,12 +57,20 @@ fi
 remove_all
 mkdir -p "$LOGS"; chmod +x "$RUN" 2>/dev/null || true
 
-# Parse all schedule.md files → TSV: area TAB set TAB skill TAB hh TAB mm
+# Parse all schedule.md files → TSV: area TAB set TAB skill TAB hh TAB mm TAB days
+# areas: organic-short-form, organic-text, meta-ads, analytics
+# days column (optional, default *): crontab day-of-week 0-6 or name (Sun Mon …) or *
 TMP=$(mktemp)
 python3 - "$REPO_ROOT" > "$TMP" <<'PY'
 import sys, re, pathlib
+
+DAY_MAP = {"sun": "0", "mon": "1", "tue": "2", "wed": "3",
+           "thu": "4", "fri": "5", "sat": "6",
+           "sunday": "0", "monday": "1", "tuesday": "2", "wednesday": "3",
+           "thursday": "4", "friday": "5", "saturday": "6"}
+
 root = pathlib.Path(sys.argv[1])
-for area in ["organic-short-form", "organic-text", "meta-ads"]:
+for area in ["organic-short-form", "organic-text", "meta-ads", "analytics"]:
     sched = root / area / "schedule.md"
     if not sched.exists():
         continue
@@ -77,17 +85,29 @@ for area in ["organic-short-form", "organic-text", "meta-ads"]:
         if not m:
             continue
         setname, skill = cols[1], cols[2]
-        # "-" set means the skill handles targeting itself (e.g. meta-ads)
         if not skill:
             continue
-        print("%s\t%s\t%s\t%d\t%d" % (area, setname, skill, int(m.group(1)), int(m.group(2))))
+        # Optional 4th column: day-of-week
+        raw_days = cols[3].strip() if len(cols) >= 4 else "*"
+        days = DAY_MAP.get(raw_days.lower(), raw_days) if raw_days else "*"
+        if not days:
+            days = "*"
+        print("%s\t%s\t%s\t%d\t%d\t%s" % (
+            area, setname, skill,
+            int(m.group(1)), int(m.group(2)), days))
 PY
 
 install_systemd_timer() {
-  # $1=label $2=hh $3=mm $4+ = command args
-  label="$1"; hh="$2"; mm="$3"; shift 3
+  # $1=label $2=hh $3=mm $4=days $5+ = command args
+  label="$1"; hh="$2"; mm="$3"; days="$4"; shift 4
   mkdir -p "$SD"
-  # Service unit
+  # Translate crontab day number to systemd day abbreviation
+  _dow=""
+  case "$days" in
+    0) _dow="Sun " ;; 1) _dow="Mon " ;; 2) _dow="Tue " ;;
+    3) _dow="Wed " ;; 4) _dow="Thu " ;; 5) _dow="Fri " ;;
+    6) _dow="Sat " ;; *) _dow="" ;;
+  esac
   cat > "$SD/${label}.service" <<EOF
 [Unit]
 Description=AI CMO: $label
@@ -99,13 +119,12 @@ StandardOutput=append:$LOGS/systemd.log
 StandardError=append:$LOGS/systemd.log
 WorkingDirectory=$REPO_ROOT
 EOF
-  # Timer unit
   cat > "$SD/${label}.timer" <<EOF
 [Unit]
 Description=AI CMO timer: $label
 
 [Timer]
-OnCalendar=*-*-* $(printf '%02d:%02d:00' "$hh" "$mm")
+OnCalendar=${_dow}*-*-* $(printf '%02d:%02d:00' "$hh" "$mm")
 Persistent=true
 
 [Install]
@@ -118,18 +137,25 @@ EOF
 
 CRON_TMP=$(mktemp); TAB=$(printf '\t')
 echo "Installing alarms from schedules ($LINUX_SCHED):"; echo ""
-while IFS="$TAB" read -r area setn skill hh mm; do
+while IFS="$TAB" read -r area setn skill hh mm days; do
   [ -n "${area:-}" ] || continue
   label="$PREFIX.$area-$setn-$skill.t$(printf '%02d%02d' "$hh" "$mm")"
   case "$OS" in
     Darwin)
+      # launchd does not support day-of-week natively in StartCalendarInterval weekday form;
+      # use Weekday key (0=Sun) when days != *
+      if [ "$days" = "*" ]; then
+        dow_xml=""
+      else
+        dow_xml="<key>Weekday</key><integer>$days</integer>"
+      fi
       cat > "$LA/$label.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>$label</string>
   <key>ProgramArguments</key><array><string>/bin/sh</string><string>$RUN</string><string>$area</string><string>$setn</string><string>$skill</string></array>
-  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>$hh</integer><key>Minute</key><integer>$mm</integer></dict>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>$hh</integer><key>Minute</key><integer>$mm</integer>$dow_xml</dict>
   <key>StandardOutPath</key><string>$LOGS/launchd.out.log</string>
   <key>StandardErrorPath</key><string>$LOGS/launchd.err.log</string>
 </dict></plist>
@@ -138,43 +164,19 @@ EOF
       launchctl load "$LA/$label.plist" ;;
     Linux)
       case "$LINUX_SCHED" in
-        crontab) printf '%d %d * * * /bin/sh "%s" "%s" "%s" "%s" >> "%s/cron.log" 2>&1 # %s\n' \
-                   "$mm" "$hh" "$RUN" "$area" "$setn" "$skill" "$LOGS" "$PREFIX" >> "$CRON_TMP" ;;
-        systemd) install_systemd_timer "$label" "$hh" "$mm" "$area" "$setn" "$skill" ;;
+        crontab) printf '%d %d * * %s /bin/sh "%s" "%s" "%s" "%s" >> "%s/cron.log" 2>&1 # %s\n' \
+                   "$mm" "$hh" "$days" "$RUN" "$area" "$setn" "$skill" "$LOGS" "$PREFIX" >> "$CRON_TMP" ;;
+        systemd) install_systemd_timer "$label" "$hh" "$mm" "$days" "$area" "$setn" "$skill" ;;
         *)       echo "  WARNING: no scheduler found — alarm not registered for $label" ;;
       esac ;;
   esac
-  printf '  %02d:%02d  %s  set=%s  skill=%s\n' "$hh" "$mm" "$area" "$setn" "$skill"
+  if [ "$days" = "*" ]; then
+    printf '  %02d:%02d  daily    %s  set=%s  skill=%s\n' "$hh" "$mm" "$area" "$setn" "$skill"
+  else
+    printf '  %02d:%02d  day=%s    %s  set=%s  skill=%s\n' "$hh" "$mm" "$days" "$area" "$setn" "$skill"
+  fi
 done < "$TMP"
 rm -f "$TMP"
-
-# Nightly self-study alarm
-SHH=$(expr "$(printf '%s' "$STUDY_TIME" | cut -d: -f1)" + 0)
-SMM=$(expr "$(printf '%s' "$STUDY_TIME" | cut -d: -f2)" + 0)
-study_label="$PREFIX.study"
-case "$OS" in
-  Darwin)
-    cat > "$LA/$study_label.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>$study_label</string>
-  <key>ProgramArguments</key><array><string>/bin/sh</string><string>$RUN</string><string>--study</string></array>
-  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>$SHH</integer><key>Minute</key><integer>$SMM</integer></dict>
-  <key>StandardOutPath</key><string>$LOGS/launchd.out.log</string>
-  <key>StandardErrorPath</key><string>$LOGS/launchd.err.log</string>
-</dict></plist>
-EOF
-    launchctl unload "$LA/$study_label.plist" 2>/dev/null || true
-    launchctl load "$LA/$study_label.plist" ;;
-  Linux)
-    case "$LINUX_SCHED" in
-      crontab) printf '%d %d * * * /bin/sh "%s" --study >> "%s/cron.log" 2>&1 # %s\n' \
-                 "$SMM" "$SHH" "$RUN" "$LOGS" "$PREFIX" >> "$CRON_TMP" ;;
-      systemd) install_systemd_timer "$study_label" "$SHH" "$SMM" "--study" ;;
-    esac ;;
-esac
-printf '  %02d:%02d  (nightly self-study)\n' "$SHH" "$SMM"
 
 # Commit crontab if using it
 [ "$LINUX_SCHED" = "crontab" ] && \

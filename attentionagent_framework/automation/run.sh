@@ -2,7 +2,8 @@
 # Runs ONE scheduled action, then exits. Called by each cron/launchd/systemd alarm.
 #   run.sh <area> <set> <skill>   make content and post it (organic areas)
 #   run.sh meta-ads - <skill>     run a meta-ads skill (no set/accounts)
-#   run.sh --study                pull metrics, self-study, write daily report
+#   run.sh analytics - <skill>    run an analytics skill (no set/accounts)
+#   run.sh --study                (legacy) alias for: run.sh analytics - self-study
 # Respects the loop: on/off switch in automation/config.md.
 # Retries up to MAX_RETRIES times with exponential backoff on failure.
 set -u
@@ -32,8 +33,21 @@ if [ -f "$AGENT_JSON" ]; then
 fi
 
 if [ "${1:-}" = "--study" ]; then
-  TAG="study"
-  PROMPT="End-of-day self-study: (1) collect today's post IDs from every published.log in organic-short-form/sets/ and organic-text/sets/, (2) pull metrics for those IDs using analytics/sources.md, (3) score and update analytics/winners.md with today's top performers, (4) run the self-study skill at analytics/skills/self-study/SKILL.md, (5) append lessons to company/memory/content-performance.md, (6) write today's report to analytics/reports/report-$(date +%Y-%m-%d).md."
+  # Legacy alias — redirect to the analytics branch
+  set -- analytics - self-study
+fi
+
+if [ "${1:-}" = "analytics" ]; then
+  SKILL="${3:-}"
+  if [ -z "$SKILL" ] || [ "$SKILL" = "-" ]; then
+    echo "$(stamp) ERROR: analytics requires a skill name as arg 3" >> "$LOG"; exit 1
+  fi
+  SKILL_DIR="$REPO_ROOT/analytics/skills/$SKILL"
+  if [ ! -d "$SKILL_DIR" ]; then
+    echo "$(stamp) ERROR: skill directory not found: $SKILL_DIR" >> "$LOG"; exit 1
+  fi
+  TAG="analytics/$SKILL"
+  PROMPT="Run the analytics skill '$SKILL' defined in analytics/skills/$SKILL/SKILL.md now. Follow every step in the skill file exactly. Read company/memory/content-performance.md for historical context. Load API credentials from .env. Write all output files to the paths specified in the skill. Log errors and continue — never abort for a single platform failure."
 
 elif [ "${1:-}" = "meta-ads" ]; then
   # Meta-ads skills operate globally — no set or accounts directory

@@ -1,19 +1,12 @@
 # Analytics — schedule
 
 Runs independently of the organic posting areas.
-The `area` for these rows is `analytics` and `run.sh` treats it like any other area
-(reads `analytics/skills/<skill>/SKILL.md`, no set directory needed — set is `-`).
+`area=analytics`, `set=-` (no accounts), skill maps to `analytics/skills/<skill>/SKILL.md`.
 
-Add rows here, then re-run `sh automation/install.sh`.
+The optional 4th column `days` sets day-of-week: `*` = every day, `0`–`6` = Sun–Sat,
+or day names like `Sun`, `Mon`. Re-run `sh automation/install.sh` after editing.
 
-| time  | set | skill         |
-|-------|-----|---------------|
-| 23:30 | -   | self-study    |
-| 21:00 | -   | weekly-report |
-
-<!--
-self-study  : runs every night, pulls today's metrics, updates winners.md and memory.
-weekly-report : runs every Sunday; install.sh will need day-of-week support to restrict
-                this to Sundays only. Until then it runs nightly and overwrites the same file.
-                A future improvement: add a day-of-week column to the schedule format.
--->
+| time  | set | skill         | days |
+|-------|-----|---------------|------|
+| 23:30 | -   | self-study    | *    |
+| 21:00 | -   | weekly-report | Sun  |
