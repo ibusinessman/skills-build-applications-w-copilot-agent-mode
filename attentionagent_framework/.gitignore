@@ -1,0 +1,17 @@
+# Never commit real credentials
+.env
+
+# Keep the example so the repo is self-documenting
+!.env.example
+
+# Runtime output — large media files should not be committed
+organic-short-form/sets/*/output/*.mp4
+organic-short-form/sets/*/output/*.mov
+organic-short-form/sets/*/output/*.jpg
+organic-short-form/sets/*/output/*.png
+organic-text/sets/*/output/*.jpg
+organic-text/sets/*/output/*.png
+
+# OS noise
+.DS_Store
+Thumbs.db

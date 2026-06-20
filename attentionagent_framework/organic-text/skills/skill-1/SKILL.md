@@ -39,12 +39,15 @@ If the insight needs more than 280 chars for X, write it as a 2–3 tweet thread
 (number them 1/ 2/ 3/).
 
 ## Steps
-1. Read the company files above.
-2. Choose ONE insight: something the ICP believes that's wrong, or something true that
-   most people in their world don't know yet.
-3. Write the post following the format. Check per-platform limits.
-4. Save to `output/insight-thread-<YYYY-MM-DD>.md` with platform sections clearly marked.
-5. Post via `python3 automation/post/<platform>.py --text "<adapted text>"` for each account.
+1. Read `company/README.md` then load the company files in order.
+2. Scan `output/` for the last 7 days of insight-thread files. Note the topics — do NOT
+   repeat the same insight or contrarian angle within 7 days.
+3. Choose ONE insight that hasn't been covered recently.
+4. Write the post following the format. Check per-platform limits.
+5. Save to `output/insight-thread-<YYYY-MM-DD>.md` with platform sections clearly marked.
+6. For each account file in `accounts/`, skip any with `disabled: true`. For the rest:
+   `python3 automation/post/<platform>.py --text "<adapted text>"`
+7. On success, append to `published.log`: `<ISO-datetime> <platform> <post-id>`
 
 ## Quality checks
 - Opening line works as a standalone pull-quote

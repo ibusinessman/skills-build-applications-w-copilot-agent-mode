@@ -35,12 +35,16 @@ One story-format text post per run with per-platform adaptations.
 | Facebook | warm | 400 chars | Plain, no hashtags |
 
 ## Steps
-1. Read company files above.
-2. Choose a real or archetypal situation the ICP will recognise from their own work.
+1. Read `company/README.md` then load the company files in order.
+2. Scan `output/` for the last 7 days of story-lesson files. Note scenarios used —
+   do NOT reuse the same situation or lesson angle within 7 days.
+3. Choose a real or archetypal situation the ICP will recognise from their own work.
    It does NOT have to be about the product — it should be about their world.
-3. Write the story following the format. Keep it specific; avoid generic lessons.
-4. Save to `output/story-lesson-<YYYY-MM-DD>.md` with platform sections marked.
-5. Post via `python3 automation/post/<platform>.py --text "<adapted text>"` for each account.
+4. Write the story following the format. Keep it specific; avoid generic lessons.
+5. Save to `output/story-lesson-<YYYY-MM-DD>.md` with platform sections marked.
+6. For each account file in `accounts/`, skip any with `disabled: true`. For the rest:
+   `python3 automation/post/<platform>.py --text "<adapted text>"`
+7. On success, append to `published.log`: `<ISO-datetime> <platform> <post-id>`
 
 ## Quality checks
 - The scene has at least ONE concrete detail (name, number, tool, moment)

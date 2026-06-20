@@ -48,7 +48,7 @@ else
     echo "$(stamp) ERROR: set directory not found: $SET_DIR" >> "$LOG"; exit 1
   fi
   TAG="$AREA/$SET/$SKILL"
-  PROMPT="Run skill '$SKILL' from $AREA/skills/$SKILL/SKILL.md now: make ONE piece of content (read company/ as your standing context first), then post it to EVERY account in $AREA/sets/$SET/accounts/ by running 'python3 automation/post/<platform>.py' for each account file (the filename IS the platform), loading API keys from .env. No drafts — make it and post it."
+  PROMPT="Run skill '$SKILL' from $AREA/skills/$SKILL/SKILL.md now: make ONE piece of content (read company/ as your standing context first), then post it to every ENABLED account in $AREA/sets/$SET/accounts/. An account is disabled if its .md file contains 'disabled: true' — skip those silently. For each enabled account, run 'python3 automation/post/<platform>.py' (the filename without .md is the platform), loading API keys from .env. After each successful post write one line to $AREA/sets/$SET/published.log: '<ISO-datetime> <platform> <post-id>'. No drafts — make it and post it."
 fi
 
 # Retry loop with exponential backoff (1s, 2s, 4s)

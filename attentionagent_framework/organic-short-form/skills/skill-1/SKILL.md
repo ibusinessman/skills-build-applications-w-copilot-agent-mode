@@ -32,14 +32,20 @@ the caption is adapted per platform (length, hashtags, link placement).
 ```
 
 ## Steps
-1. Read the company files listed above.
-2. Pick ONE specific idea from `company/product.md` or `company/icp.md` pain points.
-3. Write the script following the structure above (≤ 60 s at ~130 wpm spoken).
-4. Write the caption (platform-agnostic first, then note any per-platform adjustments).
-5. Save both to `output/hook-value-cta-<YYYY-MM-DD>.md`.
-6. For each account file in the set's `accounts/`, call:
+1. Read the company files listed above (see `company/README.md` for order).
+2. Scan `output/` for the last 7 days of hook-value-cta files. Note the topics and
+   hooks used — do NOT repeat the same hook angle or topic within 7 days.
+3. Pick ONE specific idea from `company/product.md` or `company/icp.md` pain points
+   that hasn't been covered recently.
+4. Write the script following the structure above (≤ 60 s at ~130 wpm spoken).
+5. Write the caption (platform-agnostic first, then note any per-platform adjustments).
+6. Save both to `output/hook-value-cta-<YYYY-MM-DD>.md`.
+7. For each account file in the set's `accounts/`, skip any file containing `disabled: true`.
+   For enabled accounts call:
    `python3 automation/post/<platform>.py --text "<caption>" --media <media_url_or_path>`
    using the credentials in `.env`.
+8. On success, append to the set's `published.log`:
+   `<ISO-datetime> <platform> <post-id>`
 
 ## Quality checks before posting
 - Hook does NOT start with "I" or the company name

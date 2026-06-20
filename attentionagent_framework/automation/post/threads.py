@@ -6,10 +6,9 @@ Usage:
   python3 automation/post/threads.py --text "watch" --media https://cdn.you/clip.mp4
   python3 automation/post/threads.py --dry-run
 
-Env (.env): THREADS_USER_ID  THREADS_ACCESS_TOKEN   (+ optional THREADS_WAIT, default 30)
+Env (.env): THREADS_USER_ID  THREADS_ACCESS_TOKEN
 Docs: https://developers.facebook.com/docs/threads/reference/publishing/
 """
-import os
 import sys
 import time
 from pathlib import Path
@@ -53,7 +52,16 @@ def main():
         L.fail("Threads returned no creation id", response=j)
 
     if a["media"]:
-        time.sleep(int(os.environ.get("THREADS_WAIT", "30")))
+        # Poll until the container finishes processing (mirrors Instagram's approach).
+        for _ in range(30):
+            st, _, s = L.get("%s/%s" % (HOST, cid),
+                             {"fields": "status", "access_token": token})
+            code = s.get("status")
+            if code == "FINISHED":
+                break
+            if code in ("ERROR", "EXPIRED"):
+                L.fail("Threads media processing failed", response=s)
+            time.sleep(5)
 
     st, _, j = L.post_form("%s/%s/threads_publish" % (HOST, uid),
                            {"creation_id": cid, "access_token": token})

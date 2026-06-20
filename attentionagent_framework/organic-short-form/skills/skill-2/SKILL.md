@@ -33,14 +33,19 @@ that's performing well right now. Plus a platform-adapted caption.
 ```
 
 ## Steps
-1. Identify one trending topic or viral format from the last 48 hours that the ICP
+1. Read `company/README.md` then load the company files in order.
+2. Scan `output/` for the last 14 days of trending-angle files. List the trends already
+   covered — do NOT repeat a trend or hook format used within 14 days.
+3. Identify one trending topic or viral format from the last 48 hours that the ICP
    would already be talking about. Ground this in the ICP's platforms from `company/icp.md`.
-2. Find the genuine connection to the company's product or expertise. If the connection
+4. Find the genuine connection to the company's product or expertise. If the connection
    feels forced, choose a different trend.
-3. Write the script (≤ 45 s at ~130 wpm).
-4. Write the caption with trending hashtags.
-5. Save to `output/trending-angle-<YYYY-MM-DD>.md`.
-6. Post via `python3 automation/post/<platform>.py` for each account in the set.
+5. Write the script (≤ 45 s at ~130 wpm).
+6. Write the caption with trending hashtags.
+7. Save to `output/trending-angle-<YYYY-MM-DD>.md`.
+8. For each account file in `accounts/`, skip any with `disabled: true`. For the rest:
+   `python3 automation/post/<platform>.py --text "<caption>" --media <path-or-url>`
+9. On success, append to `published.log`: `<ISO-datetime> <platform> <post-id>`
 
 ## Quality checks
 - The trend connection is authentic — not "X happened, anyway buy our product"
