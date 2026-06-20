@@ -1,9 +1,10 @@
 #!/bin/sh
-# Runs ONE scheduled action, then exits. Called by each cron/launchd alarm.
-#   run.sh <area> <set> <skill>   make that skill's content, post to that set's accounts
-#   run.sh --study                measure + self-study + write the daily summary
-# Respects the on/off switch in automation/config.md.
-# On transient failure, retries up to MAX_RETRIES times with exponential backoff.
+# Runs ONE scheduled action, then exits. Called by each cron/launchd/systemd alarm.
+#   run.sh <area> <set> <skill>   make content and post it (organic areas)
+#   run.sh meta-ads - <skill>     run a meta-ads skill (no set/accounts)
+#   run.sh --study                pull metrics, self-study, write daily report
+# Respects the loop: on/off switch in automation/config.md.
+# Retries up to MAX_RETRIES times with exponential backoff on failure.
 set -u
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
@@ -32,13 +33,26 @@ fi
 
 if [ "${1:-}" = "--study" ]; then
   TAG="study"
-  PROMPT="End-of-day self-study: (1) pull metrics for every account using analytics/sources.md, (2) score posts and update analytics/winners.md with today's top performers, (3) run the self-study skill at analytics/skills/self-study/SKILL.md, (4) append lessons to company/memory/content-performance.md, (5) write today's report to analytics/reports/report-$(date +%Y-%m-%d).md."
+  PROMPT="End-of-day self-study: (1) collect today's post IDs from every published.log in organic-short-form/sets/ and organic-text/sets/, (2) pull metrics for those IDs using analytics/sources.md, (3) score and update analytics/winners.md with today's top performers, (4) run the self-study skill at analytics/skills/self-study/SKILL.md, (5) append lessons to company/memory/content-performance.md, (6) write today's report to analytics/reports/report-$(date +%Y-%m-%d).md."
+
+elif [ "${1:-}" = "meta-ads" ]; then
+  # Meta-ads skills operate globally — no set or accounts directory
+  SKILL="${3:-}"
+  if [ -z "$SKILL" ] || [ "$SKILL" = "-" ]; then
+    echo "$(stamp) ERROR: meta-ads requires a skill name as arg 3" >> "$LOG"; exit 1
+  fi
+  SKILL_DIR="$REPO_ROOT/meta-ads/skills/$SKILL"
+  if [ ! -d "$SKILL_DIR" ]; then
+    echo "$(stamp) ERROR: skill directory not found: $SKILL_DIR" >> "$LOG"; exit 1
+  fi
+  TAG="meta-ads/$SKILL"
+  PROMPT="Run the meta-ads skill '$SKILL' from meta-ads/skills/$SKILL/SKILL.md now. Read company/ for brand context. Read analytics/winners.md for today's top posts. Read meta-ads/rules.md for eligibility criteria. Read meta-ads/ad-account.md for the Ad Account ID and audience config. Follow every step in the skill exactly. Load API credentials from .env. Log errors to automation/logs/meta-ads-$(date +%Y-%m-%d).log and continue — never abort the full run for one campaign failure."
+
 else
   AREA="${1:-}"; SET="${2:-}"; SKILL="${3:-}"
   if [ -z "$AREA" ] || [ -z "$SET" ] || [ -z "$SKILL" ]; then
-    echo "$(stamp) ERROR usage: run.sh <area> <set> <skill> | --study" >> "$LOG"; exit 1
+    echo "$(stamp) ERROR usage: run.sh <area> <set> <skill> | meta-ads - <skill> | --study" >> "$LOG"; exit 1
   fi
-  # Validate that the skill and set directories exist before running
   SKILL_DIR="$REPO_ROOT/$AREA/skills/$SKILL"
   SET_DIR="$REPO_ROOT/$AREA/sets/$SET"
   if [ ! -d "$SKILL_DIR" ]; then
@@ -48,10 +62,10 @@ else
     echo "$(stamp) ERROR: set directory not found: $SET_DIR" >> "$LOG"; exit 1
   fi
   TAG="$AREA/$SET/$SKILL"
-  PROMPT="Run skill '$SKILL' from $AREA/skills/$SKILL/SKILL.md now: make ONE piece of content (read company/ as your standing context first), then post it to every ENABLED account in $AREA/sets/$SET/accounts/. An account is disabled if its .md file contains 'disabled: true' — skip those silently. For each enabled account, run 'python3 automation/post/<platform>.py' (the filename without .md is the platform), loading API keys from .env. After each successful post write one line to $AREA/sets/$SET/published.log: '<ISO-datetime> <platform> <post-id>'. No drafts — make it and post it."
+  PROMPT="Run skill '$SKILL' from $AREA/skills/$SKILL/SKILL.md now: (1) read company/ in the order defined in company/README.md, (2) make ONE piece of content, (3) post it to every ENABLED account in $AREA/sets/$SET/accounts/ — skip any account file containing 'disabled: true', (4) for each enabled account run 'python3 automation/post/<platform>.py' where <platform> is the filename without .md, loading API keys from .env, (5) after each successful post append one line to $AREA/sets/$SET/published.log: '<ISO-8601-datetime> <platform> <post-id>'. No drafts, no approval — make it and post it."
 fi
 
-# Retry loop with exponential backoff (1s, 2s, 4s)
+# Retry with exponential backoff (1s → 2s → 4s)
 MAX_RETRIES=3
 attempt=1
 delay=1

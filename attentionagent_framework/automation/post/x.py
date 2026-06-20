@@ -9,8 +9,8 @@ Usage:
 Env (.env): X_API_KEY  X_API_SECRET  X_ACCESS_TOKEN  X_ACCESS_TOKEN_SECRET
 App must have Read+Write; regenerate the access token AFTER enabling write.
 Docs: https://docs.x.com/x-api/posts/create-post
+      https://developer.x.com/en/docs/twitter-api/v1/media/upload-media/api-reference/post-media-upload
 """
-import os
 import sys
 import time
 from pathlib import Path
@@ -19,8 +19,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _lib as L
 
 TWEETS = "https://api.x.com/2/tweets"
-UPLOAD = "https://api.x.com/2/media/upload"
-CHUNK = 5 * 1024 * 1024  # 5 MB max per APPEND
+# Media upload still uses the v1.1 endpoint — the v1.1 protocol (INIT/APPEND/FINALIZE
+# via form-encoded params + OAuth 1.0a) is stable and widely supported.
+# The v2 /media/upload endpoint uses JSON and a different auth model; v1.1 is safer here.
+UPLOAD = "https://upload.twitter.com/1.1/media/upload.json"
+CHUNK = 5 * 1024 * 1024  # 5 MB per APPEND segment
 CREDS = ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]
 
 
@@ -33,48 +36,54 @@ def _auth(method, url, sign_params):
 def upload_video(path):
     data = Path(path).read_bytes()
     total = len(data)
+
+    # INIT
     init = {"command": "INIT", "total_bytes": str(total),
             "media_type": "video/mp4", "media_category": "tweet_video"}
     st, _, j = L.post_form(UPLOAD, init, {"Authorization": _auth("POST", UPLOAD, init)})
     if st >= 300:
         L.fail("X media INIT failed", status=st, response=j)
-    mid = (j.get("data") or {}).get("id") or j.get("media_id_string")
+    mid = j.get("media_id_string") or str(j.get("media_id", ""))
     if not mid:
-        L.fail("X media INIT returned no media id", response=j)
+        L.fail("X media INIT returned no media_id", response=j)
 
+    # APPEND (chunked)
     seg = 0
     for off in range(0, total, CHUNK):
         ct, body = L.multipart_body(
-            {"command": "APPEND", "media_id": str(mid), "segment_index": str(seg)},
+            {"command": "APPEND", "media_id": mid, "segment_index": str(seg)},
             [("media", "blob", data[off:off + CHUNK])])
         st, _, _ = L.http("POST", UPLOAD,
                           {"Authorization": _auth("POST", UPLOAD, {}), "Content-Type": ct}, body)
-        if st >= 300:
+        if st not in (200, 204):
             L.fail("X media APPEND failed", segment=seg, status=st)
         seg += 1
 
-    fin = {"command": "FINALIZE", "media_id": str(mid)}
+    # FINALIZE
+    fin = {"command": "FINALIZE", "media_id": mid}
     st, _, j = L.post_form(UPLOAD, fin, {"Authorization": _auth("POST", UPLOAD, fin)})
     if st >= 300:
         L.fail("X media FINALIZE failed", status=st, response=j)
 
-    info = (j.get("data") or j).get("processing_info")
+    # Poll until processing is complete
+    info = j.get("processing_info")
     while info and info.get("state") in ("pending", "in_progress"):
         time.sleep(int(info.get("check_after_secs", 5)))
-        q = {"command": "STATUS", "media_id": str(mid)}
+        q = {"command": "STATUS", "media_id": mid}
         st, _, j = L.http("GET", UPLOAD + "?" + L.urlencode(q),
                           {"Authorization": _auth("GET", UPLOAD, q)})
-        info = (j.get("data") or j).get("processing_info")
+        info = j.get("processing_info")
         if info and info.get("state") == "failed":
             L.fail("X media processing failed", response=j)
-    return str(mid)
+    return mid
 
 
 def main():
     L.load_env()
     a = L.parse_args(sys.argv[1:])
     if a["dry_run"]:
-        L.ok(dry_run=True, platform="x", text=a["text"], media=a["media"], creds_present=L.present(CREDS))
+        L.ok(dry_run=True, platform="x", text=a["text"], media=a["media"],
+             creds_present=L.present(CREDS))
     if not a["text"] and not a["media"]:
         L.fail("nothing to post: pass --text and/or --media")
 
