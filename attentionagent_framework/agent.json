@@ -1,0 +1,5 @@
+{
+  "name": "ai-cmo",
+  "model": "claude-opus-4-8",
+  "description": "AI CMO for one company — runs all its social accounts off a shared brand and the company's own content skills."
+}
