@@ -34,8 +34,7 @@ def main():
     if a["media"]:
         if not L.is_url(a["media"]):
             L.fail("Facebook poster needs --media as a public https URL")
-        is_video = a["media"].lower().split("?")[0].endswith((".mp4", ".mov"))
-        if is_video:
+        if L.is_video(a["media"]):
             st, _, j = L.post_form("%s/%s/%s/videos" % (HOST, VER, pid),
                                    {"file_url": a["media"], "description": a["text"] or "", "access_token": token})
         else:

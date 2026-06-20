@@ -34,9 +34,8 @@ def main():
     if not a["media"] or not L.is_url(a["media"]):
         L.fail("Instagram requires --media as a PUBLIC https URL (image or video)")
 
-    is_video = a["media"].lower().split("?")[0].endswith((".mp4", ".mov"))
     params = {"access_token": token, "caption": a["text"] or ""}
-    if is_video:
+    if L.is_video(a["media"]):
         params["media_type"] = "REELS"
         params["video_url"] = a["media"]
     else:

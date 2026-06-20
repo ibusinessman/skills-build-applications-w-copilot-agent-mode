@@ -21,22 +21,27 @@ echo "=================================="
 echo ""
 echo "Structure"
 for f in agent.json automation/config.md automation/run.sh automation/install.sh \
+          automation/check.sh \
           company/brand.md company/product.md company/icp.md company/offers.md \
           analytics/sources.md analytics/winners.md \
           analytics/skills/self-study/SKILL.md \
-          meta-ads/rules.md meta-ads/ad-account.md; do
+          meta-ads/rules.md meta-ads/ad-account.md \
+          meta-ads/skills/promote-winners/SKILL.md; do
   [ -f "$REPO_ROOT/$f" ] && ok "$f" || fail "missing: $f"
 done
 
 for area in organic-short-form organic-text; do
   sched="$REPO_ROOT/$area/schedule.md"
   [ -f "$sched" ] && ok "$area/schedule.md" || fail "missing: $area/schedule.md"
-  # Check each skill referenced in the schedule exists
+  # Validate every skill referenced in the schedule has a directory
   while IFS= read -r line; do
     stripped=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
     case "$stripped" in \|*) ;; *) continue ;; esac
-    cols=$(printf '%s' "$stripped" | sed 's/^|//;s/|$//' | tr '|' '\n')
-    skill=$(printf '%s' "$cols" | sed -n '3p' | tr -d ' ')
+    # Skip separator rows like |---|---|---|
+    case "$stripped" in *-*-*) continue ;; esac
+    # Extract third column (skill)
+    skill=$(printf '%s' "$stripped" | awk -F'|' '{gsub(/ /,"",$4); print $4}')
+    # Skip header row and empty extractions
     [ -z "$skill" ] || [ "$skill" = "skill" ] && continue
     d="$REPO_ROOT/$area/skills/$skill"
     [ -d "$d" ] && ok "$area/skills/$skill/" || fail "missing skill dir: $area/skills/$skill/"
@@ -51,69 +56,103 @@ if [ ! -f "$ENV_FILE" ]; then
   fail ".env not found — copy .env.example to .env and fill in your keys"
 else
   ok ".env exists"
-  # Load it
-  while IFS= read -r line; do
-    case "$line" in "#"*|"") continue ;; esac
-    key=$(printf '%s' "$line" | cut -d= -f1)
-    val=$(printf '%s' "$line" | cut -d= -f2-)
-    val=$(printf '%s' "$val" | sed "s/^['\"]//;s/['\"]$//")
-    [ -n "$val" ] && export "$key=$val" 2>/dev/null || true
-  done < "$ENV_FILE"
+  # Load .env into the current shell environment so the checks below work.
+  # Uses python3 to avoid shell quoting issues with special characters in values.
+  eval "$(python3 - "$ENV_FILE" <<'PY'
+import sys, os
+path = sys.argv[1]
+for raw in open(path).read().splitlines():
+    line = raw.strip()
+    if not line or line.startswith('#') or '=' not in line:
+        continue
+    k, _, v = line.partition('=')
+    k = k.strip()
+    v = v.strip().strip('"').strip("'")
+    if k and v:
+        # Only export if not already set
+        if k not in os.environ:
+            # Escape single quotes in v for the eval'd shell assignment
+            safe = v.replace("'", "'\\''")
+            print("export %s='%s'" % (k, safe))
+PY
+  )"
 
-  for v in X_API_KEY X_API_SECRET X_ACCESS_TOKEN X_ACCESS_TOKEN_SECRET; do
-    [ -n "${X_API_KEY:-}" ] && break
-    warn "X (Twitter) keys not set — x.py will fail"
-    break
-  done
-  [ -n "${X_API_KEY:-}" ] && [ -n "${X_API_SECRET:-}" ] && [ -n "${X_ACCESS_TOKEN:-}" ] && [ -n "${X_ACCESS_TOKEN_SECRET:-}" ] \
-    && ok "X keys present" || warn "X: one or more keys missing"
-  [ -n "${IG_USER_ID:-}" ] && [ -n "${IG_ACCESS_TOKEN:-}" ] \
-    && ok "Instagram keys present" || warn "Instagram: IG_USER_ID or IG_ACCESS_TOKEN missing"
-  [ -n "${FB_PAGE_ID:-}" ] && [ -n "${FB_PAGE_ACCESS_TOKEN:-}" ] \
-    && ok "Facebook keys present" || warn "Facebook: FB_PAGE_ID or FB_PAGE_ACCESS_TOKEN missing"
-  [ -n "${THREADS_USER_ID:-}" ] && [ -n "${THREADS_ACCESS_TOKEN:-}" ] \
-    && ok "Threads keys present" || warn "Threads: THREADS_USER_ID or THREADS_ACCESS_TOKEN missing"
-  [ -n "${LINKEDIN_ACCESS_TOKEN:-}" ] && [ -n "${LINKEDIN_AUTHOR_URN:-}" ] \
-    && ok "LinkedIn keys present" || warn "LinkedIn: LINKEDIN_ACCESS_TOKEN or LINKEDIN_AUTHOR_URN missing"
-  [ -n "${YOUTUBE_CLIENT_ID:-}" ] && [ -n "${YOUTUBE_CLIENT_SECRET:-}" ] && [ -n "${YOUTUBE_REFRESH_TOKEN:-}" ] \
-    && ok "YouTube keys present" || warn "YouTube: one or more OAuth keys missing"
-  [ -n "${TIKTOK_ACCESS_TOKEN:-}" ] \
-    && ok "TikTok key present" || warn "TikTok: TIKTOK_ACCESS_TOKEN missing"
+  # Check each platform's required vars
+  _check() {
+    label="$1"; shift
+    all_set=1
+    for v in "$@"; do
+      val=$(eval "printf '%s' \"\${${v}:-}\"")
+      [ -z "$val" ] && all_set=0 && break
+    done
+    [ "$all_set" -eq 1 ] \
+      && ok "$label keys present" \
+      || warn "$label: one or more keys missing ($*)"
+  }
+
+  _check "X (Twitter)"  X_API_KEY X_API_SECRET X_ACCESS_TOKEN X_ACCESS_TOKEN_SECRET
+  _check "Instagram"    IG_USER_ID IG_ACCESS_TOKEN
+  _check "Facebook"     FB_PAGE_ID FB_PAGE_ACCESS_TOKEN
+  _check "Threads"      THREADS_USER_ID THREADS_ACCESS_TOKEN
+  _check "LinkedIn"     LINKEDIN_ACCESS_TOKEN LINKEDIN_AUTHOR_URN
+  _check "YouTube"      YOUTUBE_CLIENT_ID YOUTUBE_CLIENT_SECRET YOUTUBE_REFRESH_TOKEN
+  _check "TikTok"       TIKTOK_ACCESS_TOKEN
 fi
 
 # --- company/ brain filled in ---
 echo ""
 echo "Company brain (placeholder check)"
+# Detect lines that still contain angle-bracket placeholders like <your company name>
+# Pattern: a < followed by a word char (avoids matching HTML tags in comments)
 for f in company/brand.md company/product.md company/icp.md company/offers.md; do
-  placeholders=$(grep -c '<' "$REPO_ROOT/$f" 2>/dev/null || echo 0)
+  placeholders=$(grep -cE '<[a-zA-Z]' "$REPO_ROOT/$f" 2>/dev/null || echo 0)
   if [ "$placeholders" -gt 0 ]; then
-    warn "$f still has $placeholders unfilled placeholder(s)"
+    warn "$f: $placeholders line(s) still have unfilled <placeholders>"
   else
     ok "$f looks filled in"
   fi
 done
 
-# --- dry-run each poster ---
+# --- dry-run each poster (syntax + import check) ---
 echo ""
-echo "Platform dry-run"
+echo "Platform scripts"
 for platform in x instagram facebook threads linkedin youtube tiktok; do
   script="$REPO_ROOT/automation/post/${platform}.py"
   if [ -f "$script" ]; then
+    # Check it parses cleanly first
+    if ! python3 -m py_compile "$script" 2>/dev/null; then
+      fail "${platform}.py has a syntax error"
+      continue
+    fi
+    # Dry-run: always returns ok=true but confirms the script is importable
     out=$(python3 "$script" --dry-run 2>&1)
     if printf '%s' "$out" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') else 1)" 2>/dev/null; then
-      ok "${platform}.py --dry-run passed"
+      # Check if the platform's creds were present in the dry-run report
+      missing=$(printf '%s' "$out" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+creds=d.get('creds_present',{})
+missing=[k for k,v in creds.items() if not v]
+print(','.join(missing))
+" 2>/dev/null)
+      if [ -n "$missing" ]; then
+        warn "${platform}.py: missing credentials: $missing"
+      else
+        ok "${platform}.py: script ok, creds present"
+      fi
     else
       fail "${platform}.py --dry-run failed: $out"
     fi
   else
-    warn "no poster for $platform"
+    warn "no poster script for: $platform"
   fi
 done
 
 # --- loop config ---
 echo ""
 echo "Loop config"
-LOOP=$(grep -E '^loop:' "$REPO_ROOT/automation/config.md" 2>/dev/null | head -1 | sed 's/^loop:[[:space:]]*//' | tr -d '[:space:]')
+LOOP=$(grep -E '^loop:' "$REPO_ROOT/automation/config.md" 2>/dev/null | head -1 \
+       | sed 's/^loop:[[:space:]]*//' | tr -d '[:space:]')
 if [ "${LOOP:-off}" = "on" ]; then
   ok "loop is ON"
 else
@@ -123,13 +162,22 @@ fi
 # --- claude binary ---
 CLAUDE=$(command -v claude 2>/dev/null || true)
 [ -z "${CLAUDE:-}" ] && [ -x "$HOME/.local/bin/claude" ] && CLAUDE="$HOME/.local/bin/claude"
-[ -n "${CLAUDE:-}" ] && ok "claude binary found: $CLAUDE" || fail "claude not found in PATH"
+[ -n "${CLAUDE:-}" ] && ok "claude found: $CLAUDE" || fail "claude not found in PATH or ~/.local/bin"
+
+# --- python3 ---
+command -v python3 >/dev/null 2>&1 && ok "python3 found" || fail "python3 not found in PATH"
 
 # --- summary ---
 echo ""
 echo "----------------------------------"
 printf "  %s passed  %s warnings  %s failed\n" "$PASS" "$WARN" "$FAIL"
 echo ""
-[ $FAIL -eq 0 ] && echo "Ready to run." || echo "Fix the failures above before turning the loop on."
+if [ $FAIL -gt 0 ]; then
+  echo "Fix the failures above before turning the loop on."
+elif [ $WARN -gt 0 ]; then
+  echo "Warnings: fill in the remaining items, then turn the loop on."
+else
+  echo "All checks passed. Ready to run."
+fi
 echo ""
 exit $FAIL

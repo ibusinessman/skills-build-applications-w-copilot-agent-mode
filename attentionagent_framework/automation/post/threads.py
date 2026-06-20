@@ -33,9 +33,9 @@ def main():
     if a["media"]:
         if not L.is_url(a["media"]):
             L.fail("Threads requires --media as a public https URL")
-        is_video = a["media"].lower().split("?")[0].endswith((".mp4", ".mov"))
-        params["media_type"] = "VIDEO" if is_video else "IMAGE"
-        params["video_url" if is_video else "image_url"] = a["media"]
+        vid = L.is_video(a["media"])
+        params["media_type"] = "VIDEO" if vid else "IMAGE"
+        params["video_url" if vid else "image_url"] = a["media"]
         if a["text"]:
             params["text"] = a["text"]
     else:

@@ -138,6 +138,14 @@ def is_url(s):
     return bool(s) and (s.startswith("http://") or s.startswith("https://"))
 
 
+_VIDEO_EXTS = (".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v")
+
+def is_video(path_or_url):
+    """True if the path or URL looks like a video file by extension."""
+    base = (path_or_url or "").lower().split("?")[0]
+    return any(base.endswith(ext) for ext in _VIDEO_EXTS)
+
+
 # ---------- OAuth 1.0a (used by X) ----------
 def _q(s):
     return urllib.parse.quote(str(s), safe="~")
