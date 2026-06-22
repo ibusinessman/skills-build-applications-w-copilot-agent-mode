@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 automation/hooks/on_write.py 2>/dev/null || true",
+            "command": "python3 automation/hooks/on_write.py",
             "timeout": 15
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 automation/hooks/on_bash.py 2>/dev/null || true",
+            "command": "python3 automation/hooks/on_bash.py",
             "timeout": 10
           }
         ]
@@ -24,10 +24,11 @@
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 automation/hooks/on_stop.py 2>/dev/null || true",
+            "command": "python3 automation/hooks/on_stop.py",
             "timeout": 10
           }
         ]
