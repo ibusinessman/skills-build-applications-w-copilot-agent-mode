@@ -12,6 +12,9 @@ organic-short-form/sets/*/output/*.png
 organic-text/sets/*/output/*.jpg
 organic-text/sets/*/output/*.png
 
+# Runtime logs — generated at execution time
+automation/logs/
+
 # OS noise
 .DS_Store
 Thumbs.db
